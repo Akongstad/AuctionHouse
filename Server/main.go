@@ -42,23 +42,24 @@ func (s *Server) Bid(ctx context.Context, bid *Auction.BidMessage) (*Auction.Bid
 		s.HighestBid = bid.Amount
 		return &Auction.BidReply{
 			ReturnType: 1,
-			Timestamp:  s.ServerTimestamp+1,
+			Timestamp:  s.ServerTimestamp + 1,
 		}, nil
 	} else {
 		return &Auction.BidReply{
 			ReturnType: 2,
-			Timestamp:  s.ServerTimestamp+1,
+			Timestamp:  s.ServerTimestamp + 1,
 		}, nil
 	}
 
-	s.lock.Lock()
+	/* s.lock.Lock()
 	defer s.lock.Unlock()
 	bidReply:= Auction.BidReply{
 		ReturnType: 1,
 		Timestamp: s.ServerTimestamp,
 	}
-	s.Broadcast(ctx, bidReply)
-	return nil, nil
+
+	s.Broadcast(ctx, &Auction.Message{User: bid.User, Timestamp: s.ServerTimestamp})
+	return &bidReply, nil */
 }
 
 func (s *Server) Result(ctx context.Context, msg *Auction.ResultMessage) (*Auction.ResultMessage, error) {
