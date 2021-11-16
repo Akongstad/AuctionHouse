@@ -1,0 +1,47 @@
+syntax = "proto3";
+option go_package = "/Users/andreaskongstad/Documents/goLang/AuctionHouse/Auction";
+package Auction;
+
+message User{
+    int64 id = 1;
+    string name = 2;
+    int32 timestamp = 3;
+}
+
+message Message{
+    User user = 1;
+    int32 timestamp = 2;
+}
+
+message ResultMessage{
+    int32 amount = 1;
+    User user = 2;
+    int32 timestamp = 3;
+    bool stillActive = 4;
+}
+
+//1 for succes, 2 for fail, 3 for exception
+message BidReply{
+    int32 returnType = 1;
+    int32 timestamp = 2;
+}
+message BidMessage{
+    int32 amount = 1;
+    User user = 2;
+    int32 timestamp = 3;
+}
+
+message Connect{
+    User user = 1;
+    bool active = 2;
+}
+
+message Close{}
+
+service AuctionHouse{
+    rpc OpenConnection(Connect) returns (stream Message){}
+    rpc CloseConnection(User) returns (Close){}
+    rpc Bid(BidMessage) returns (BidReply){}
+    rpc Result(ResultMessage) returns (ResultMessage){}
+    rpc Broadcast(Message) returns (Close){}
+}
