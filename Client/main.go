@@ -22,6 +22,10 @@ func init() {
 	wait = &sync.WaitGroup{}
 }
 
+var (
+	clock Auction.LamportClock
+)
+
 func translateReturn(nr int32) (msg string) {
 	if nr == 1 {
 		return "Success"
@@ -34,7 +38,7 @@ func translateReturn(nr int32) (msg string) {
 
 func connect(user *Auction.User) error {
 	var streamError error
-	
+
 	stream, err := client.OpenConnection(context.Background(), &Auction.Connect{
 		User:   user,
 		Active: true,
@@ -56,7 +60,8 @@ func connect(user *Auction.User) error {
 				streamError = err
 				break
 			}
-			log.Printf("Auction House: %s: Has joined the auction", msg.GetUser().GetName())
+			clock.SyncClocks(msg.GetTimestamp())
+			log.Printf("Auction House: %s: Has joined the auction(%d)", msg.GetUser().GetName(), clock.GetTime())
 		}
 	}(stream)
 
@@ -73,11 +78,9 @@ func main() {
 	flag.Parse()
 	userId := rand.Intn(999)
 	clientUser := &Auction.User{
-		Id:        int64(userId),
-		Name:      *clientName,
+		Id:   int64(userId),
+		Name: *clientName,
 	}
-
-	
 
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(":5001", grpc.WithInsecure())
@@ -105,30 +108,40 @@ func main() {
 			input := strings.ToLower(strings.TrimSpace(inputArray[0]))
 
 			if input == "exit" {
-				client.CloseConnection(context.Background(), clientUser)
+				clock.Tick()
+				client.CloseConnection(context.Background(), &Auction.Message{
+					User:      clientUser,
+					Timestamp: clock.GetTime()})
 				os.Exit(1)
 			}
 
 			if input != "" {
 				if input == "result" {
+					clock.Tick()
 					nullMsg := &Auction.Void{}
 
 					resultReply, err := client.Result(context.Background(), nullMsg)
+					clock.SyncClocks(resultReply.Timestamp)
 					if err != nil {
 						log.Printf("Error receiving current auction result: %v", err)
-						client.CloseConnection(context.Background(), clientUser)
+						client.CloseConnection(context.Background(), &Auction.Message{
+							User:      clientUser,
+							Timestamp: clock.GetTime()})
 						os.Exit(1)
 					}
 
 					if !resultReply.StillActive {
-						log.Printf("The auction is no longer active. Winner: %s bid: %d", resultReply.User.GetName(), resultReply.Amount)
-						client.CloseConnection(context.Background(), clientUser)
+						log.Printf("The auction is no longer active. Winner: %s bid: %d(%d)", resultReply.User.GetName(), resultReply.Amount, clock.GetTime() )
+						client.CloseConnection(context.Background(), &Auction.Message{
+							User:      clientUser,
+							Timestamp: clock.GetTime()})
 						os.Exit(1)
 					} else {
-						log.Printf("The auction is still active. Current highest bid: %d. By: %s", resultReply.Amount, resultReply.User.Name)
+						log.Printf("The auction is still active. Current highest bid: %d. By: %s(%d)", resultReply.Amount, resultReply.User.Name, clock.GetTime())
 					}
 
 				} else if input == "bid" {
+					clock.Tick()
 					if len(inputArray) > 0 {
 						bid, err := strconv.Atoi(inputArray[1])
 
@@ -138,8 +151,9 @@ func main() {
 						}
 
 						Bidmsg := &Auction.BidMessage{
-							Amount:    int32(bid),
-							User:      clientUser,
+							Amount: int32(bid),
+							User:   clientUser,
+							Timestamp: clock.GetTime(),
 						}
 
 						reply, err := client.Bid(context.Background(), Bidmsg)
@@ -147,8 +161,10 @@ func main() {
 							log.Printf("Error publishing Message: %v", err)
 							break
 						}
-						log.Printf("Auction House: Ack(%d)", reply.Timestamp)
+						clock.SyncClocks(reply.Timestamp)
+						log.Printf("Auction House: Ack(%d)", clock.GetTime())
 						log.Printf("bid: %s", translateReturn(reply.ReturnType))
+
 					} else {
 						log.Println("Please input a number after your bid.")
 					}

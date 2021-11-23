@@ -19,14 +19,15 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuctionHouseClient interface {
 	OpenConnection(ctx context.Context, in *Connect, opts ...grpc.CallOption) (AuctionHouse_OpenConnectionClient, error)
-	CloseConnection(ctx context.Context, in *User, opts ...grpc.CallOption) (*Void, error)
+	CloseConnection(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error)
 	Bid(ctx context.Context, in *BidMessage, opts ...grpc.CallOption) (*BidReply, error)
 	Result(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ResultMessage, error)
 	Broadcast(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error)
-	Replicate(ctx context.Context, in *BidMessage, opts ...grpc.CallOption) (*BidReply, error)
-	GetID(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Message, error)
+	Replicate(ctx context.Context, in *ReplicateMessage, opts ...grpc.CallOption) (*BidReply, error)
+	GetID(ctx context.Context, in *Void, opts ...grpc.CallOption) (*PortIndex, error)
 	RegisterPulse(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error)
 	RingElection(ctx context.Context, in *RingMessage, opts ...grpc.CallOption) (*Void, error)
+	SelectNewLeader(ctx context.Context, in *NewLeaderMessage, opts ...grpc.CallOption) (*Void, error)
 }
 
 type auctionHouseClient struct {
@@ -69,7 +70,7 @@ func (x *auctionHouseOpenConnectionClient) Recv() (*Message, error) {
 	return m, nil
 }
 
-func (c *auctionHouseClient) CloseConnection(ctx context.Context, in *User, opts ...grpc.CallOption) (*Void, error) {
+func (c *auctionHouseClient) CloseConnection(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error) {
 	out := new(Void)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/CloseConnection", in, out, opts...)
 	if err != nil {
@@ -105,7 +106,7 @@ func (c *auctionHouseClient) Broadcast(ctx context.Context, in *Message, opts ..
 	return out, nil
 }
 
-func (c *auctionHouseClient) Replicate(ctx context.Context, in *BidMessage, opts ...grpc.CallOption) (*BidReply, error) {
+func (c *auctionHouseClient) Replicate(ctx context.Context, in *ReplicateMessage, opts ...grpc.CallOption) (*BidReply, error) {
 	out := new(BidReply)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/Replicate", in, out, opts...)
 	if err != nil {
@@ -114,8 +115,8 @@ func (c *auctionHouseClient) Replicate(ctx context.Context, in *BidMessage, opts
 	return out, nil
 }
 
-func (c *auctionHouseClient) GetID(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Message, error) {
-	out := new(Message)
+func (c *auctionHouseClient) GetID(ctx context.Context, in *Void, opts ...grpc.CallOption) (*PortIndex, error) {
+	out := new(PortIndex)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/getID", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -141,19 +142,29 @@ func (c *auctionHouseClient) RingElection(ctx context.Context, in *RingMessage, 
 	return out, nil
 }
 
+func (c *auctionHouseClient) SelectNewLeader(ctx context.Context, in *NewLeaderMessage, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/SelectNewLeader", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuctionHouseServer is the server API for AuctionHouse service.
 // All implementations must embed UnimplementedAuctionHouseServer
 // for forward compatibility
 type AuctionHouseServer interface {
 	OpenConnection(*Connect, AuctionHouse_OpenConnectionServer) error
-	CloseConnection(context.Context, *User) (*Void, error)
+	CloseConnection(context.Context, *Message) (*Void, error)
 	Bid(context.Context, *BidMessage) (*BidReply, error)
 	Result(context.Context, *Void) (*ResultMessage, error)
 	Broadcast(context.Context, *Message) (*Void, error)
-	Replicate(context.Context, *BidMessage) (*BidReply, error)
-	GetID(context.Context, *Void) (*Message, error)
+	Replicate(context.Context, *ReplicateMessage) (*BidReply, error)
+	GetID(context.Context, *Void) (*PortIndex, error)
 	RegisterPulse(context.Context, *Message) (*Void, error)
 	RingElection(context.Context, *RingMessage) (*Void, error)
+	SelectNewLeader(context.Context, *NewLeaderMessage) (*Void, error)
 	mustEmbedUnimplementedAuctionHouseServer()
 }
 
@@ -164,7 +175,7 @@ type UnimplementedAuctionHouseServer struct {
 func (UnimplementedAuctionHouseServer) OpenConnection(*Connect, AuctionHouse_OpenConnectionServer) error {
 	return status.Errorf(codes.Unimplemented, "method OpenConnection not implemented")
 }
-func (UnimplementedAuctionHouseServer) CloseConnection(context.Context, *User) (*Void, error) {
+func (UnimplementedAuctionHouseServer) CloseConnection(context.Context, *Message) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseConnection not implemented")
 }
 func (UnimplementedAuctionHouseServer) Bid(context.Context, *BidMessage) (*BidReply, error) {
@@ -176,10 +187,10 @@ func (UnimplementedAuctionHouseServer) Result(context.Context, *Void) (*ResultMe
 func (UnimplementedAuctionHouseServer) Broadcast(context.Context, *Message) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Broadcast not implemented")
 }
-func (UnimplementedAuctionHouseServer) Replicate(context.Context, *BidMessage) (*BidReply, error) {
+func (UnimplementedAuctionHouseServer) Replicate(context.Context, *ReplicateMessage) (*BidReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Replicate not implemented")
 }
-func (UnimplementedAuctionHouseServer) GetID(context.Context, *Void) (*Message, error) {
+func (UnimplementedAuctionHouseServer) GetID(context.Context, *Void) (*PortIndex, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetID not implemented")
 }
 func (UnimplementedAuctionHouseServer) RegisterPulse(context.Context, *Message) (*Void, error) {
@@ -187,6 +198,9 @@ func (UnimplementedAuctionHouseServer) RegisterPulse(context.Context, *Message) 
 }
 func (UnimplementedAuctionHouseServer) RingElection(context.Context, *RingMessage) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RingElection not implemented")
+}
+func (UnimplementedAuctionHouseServer) SelectNewLeader(context.Context, *NewLeaderMessage) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SelectNewLeader not implemented")
 }
 func (UnimplementedAuctionHouseServer) mustEmbedUnimplementedAuctionHouseServer() {}
 
@@ -223,7 +237,7 @@ func (x *auctionHouseOpenConnectionServer) Send(m *Message) error {
 }
 
 func _AuctionHouse_CloseConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(User)
+	in := new(Message)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -235,7 +249,7 @@ func _AuctionHouse_CloseConnection_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/Auction.AuctionHouse/CloseConnection",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuctionHouseServer).CloseConnection(ctx, req.(*User))
+		return srv.(AuctionHouseServer).CloseConnection(ctx, req.(*Message))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -295,7 +309,7 @@ func _AuctionHouse_Broadcast_Handler(srv interface{}, ctx context.Context, dec f
 }
 
 func _AuctionHouse_Replicate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BidMessage)
+	in := new(ReplicateMessage)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -307,7 +321,7 @@ func _AuctionHouse_Replicate_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/Auction.AuctionHouse/Replicate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuctionHouseServer).Replicate(ctx, req.(*BidMessage))
+		return srv.(AuctionHouseServer).Replicate(ctx, req.(*ReplicateMessage))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -366,6 +380,24 @@ func _AuctionHouse_RingElection_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuctionHouse_SelectNewLeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewLeaderMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).SelectNewLeader(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/SelectNewLeader",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).SelectNewLeader(ctx, req.(*NewLeaderMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuctionHouse_ServiceDesc is the grpc.ServiceDesc for AuctionHouse service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -404,6 +436,10 @@ var AuctionHouse_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RingElection",
 			Handler:    _AuctionHouse_RingElection_Handler,
+		},
+		{
+			MethodName: "SelectNewLeader",
+			Handler:    _AuctionHouse_SelectNewLeader_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

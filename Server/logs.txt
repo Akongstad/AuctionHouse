@@ -1,19 +1,22 @@
-2021/11/23 13:58:26 Auctioneer: Auction started at 13:58:26. Duration will be: 30 seconds
-2021/11/23 13:58:26 Auction open at: [::]:5001
-2021/11/23 13:58:53 Auctioneer: 3
-2021/11/23 13:58:54 Auctioneer: 2
-2021/11/23 13:58:55 Auctioneer: 1
-2021/11/23 13:58:56 Auctioneer: 0
-2021/11/23 13:58:56 Auctioneer: Auction closed. Highest bid: 0 by 
-
-y 
-
-11/23 11:43:32 Auction House: Carlostemad has left the auction(1)
-oined the auction!(1)
-2021/11/23 11:39:36 Broadcasting message to: Carlostemad
-2021/11/23 11:39:36 Broadcasting message to: Carlostemad
-adcasting message to: Carlostemad
-tion!(1)
-2021/11/23 11:17:38 Broadcasting message to: Rasmus
-2021/11/23 11:17:38 Broadcasting message to: Carlostemad
-2021/11/23 11:17:38 Broadcasting message to: Rasmus
+2021/11/23 16:50:12 Auctioneer: Auction started at 16:50:12. On: 5750. Duration will be: 30 seconds
+2021/11/23 16:50:12 Auction open at: [::]:5750
+2021/11/23 16:50:21 Received pulse from prime replica
+2021/11/23 16:50:31 Received pulse from prime replica
+2021/11/23 16:50:39 Auctioneer: 3
+2021/11/23 16:50:40 Auctioneer: 2
+2021/11/23 16:50:41 Received pulse from prime replica
+2021/11/23 16:50:41 Auctioneer: 1
+2021/11/23 16:50:42 Auctioneer: 0
+2021/11/23 16:50:42 Auctioneer: Auction closed. Highest bid: 0 by 
+2021/11/23 16:50:51 Received pulse from prime replica
+2021/11/23 16:51:01 Received pulse from prime replica
+2021/11/23 16:51:11 Received pulse from prime replica
+2021/11/23 16:51:21 Received pulse from prime replica
+2021/11/23 16:51:31 Received pulse from prime replica
+2021/11/23 16:51:41 Received pulse from prime replica
+2021/11/23 16:52:02 Missing pulse from prime replica. Last Pulse: 39 seconds ago
+d pulse from prime replica
+2021/11/23 16:52:09 Missing pulse from prime replica. Last Pulse: 32 seconds ago
+2021/11/23 16:52:09 Leader election called
+2021/11/23 16:52:19 Missing pulse from prime replica. Last Pulse: 22 seconds ago
+2021/11/23 16:52:19 Leader election called
