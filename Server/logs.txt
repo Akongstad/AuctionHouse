@@ -1,0 +1,19 @@
+2021/11/23 13:58:26 Auctioneer: Auction started at 13:58:26. Duration will be: 30 seconds
+2021/11/23 13:58:26 Auction open at: [::]:5001
+2021/11/23 13:58:53 Auctioneer: 3
+2021/11/23 13:58:54 Auctioneer: 2
+2021/11/23 13:58:55 Auctioneer: 1
+2021/11/23 13:58:56 Auctioneer: 0
+2021/11/23 13:58:56 Auctioneer: Auction closed. Highest bid: 0 by 
+
+y 
+
+11/23 11:43:32 Auction House: Carlostemad has left the auction(1)
+oined the auction!(1)
+2021/11/23 11:39:36 Broadcasting message to: Carlostemad
+2021/11/23 11:39:36 Broadcasting message to: Carlostemad
+adcasting message to: Carlostemad
+tion!(1)
+2021/11/23 11:17:38 Broadcasting message to: Rasmus
+2021/11/23 11:17:38 Broadcasting message to: Carlostemad
+2021/11/23 11:17:38 Broadcasting message to: Rasmus

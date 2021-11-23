@@ -5,7 +5,6 @@ package Auction;
 message User{
     int64 id = 1;
     string name = 2;
-    int32 timestamp = 3;
 }
 
 message Message{
@@ -20,11 +19,12 @@ message ResultMessage{
     bool stillActive = 4;
 }
 
-//1 for succes, 2 for fail, 3 for exception
+//Returntype = 1 for success, 2 for fail, 3 for exception
 message BidReply{
     int32 returnType = 1;
     int32 timestamp = 2;
 }
+
 message BidMessage{
     int32 amount = 1;
     User user = 2;
@@ -36,12 +36,20 @@ message Connect{
     bool active = 2;
 }
 
-message Close{}
+message Void{}
+
+message RingMessage{
+    repeated int32 listOfPorts = 1;
+}
 
 service AuctionHouse{
     rpc OpenConnection(Connect) returns (stream Message){}
-    rpc CloseConnection(User) returns (Close){}
+    rpc CloseConnection(User) returns (Void){}
     rpc Bid(BidMessage) returns (BidReply){}
-    rpc Result(ResultMessage) returns (ResultMessage){}
-    rpc Broadcast(Message) returns (Close){}
+    rpc Result(Void) returns (ResultMessage){}
+    rpc Broadcast(Message) returns (Void){}
+    rpc Replicate(BidMessage) returns (BidReply){}
+    rpc getID(Void) returns (Message){}
+    rpc RegisterPulse(Message) returns (Void){}
+    rpc RingElection(RingMessage) returns (Void){}
 }

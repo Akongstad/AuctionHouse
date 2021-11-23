@@ -15,10 +15,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	port = ":9000"
-)
-
 var client Auction.AuctionHouseClient
 var wait *sync.WaitGroup
 
@@ -26,10 +22,19 @@ func init() {
 	wait = &sync.WaitGroup{}
 }
 
+func translateReturn(nr int32) (msg string) {
+	if nr == 1 {
+		return "Success"
+	} else if nr == 2 {
+		return "Fail"
+	} else {
+		return "Exception"
+	}
+}
+
 func connect(user *Auction.User) error {
 	var streamError error
-
-	user.Timestamp++
+	
 	stream, err := client.OpenConnection(context.Background(), &Auction.Connect{
 		User:   user,
 		Active: true,
@@ -51,7 +56,7 @@ func connect(user *Auction.User) error {
 				streamError = err
 				break
 			}
-			log.Printf("%v:,(%d)", msg.GetUser().GetName(), user.GetTimestamp())
+			log.Printf("Auction House: %s: Has joined the auction", msg.GetUser().GetName())
 		}
 	}(stream)
 
@@ -70,11 +75,12 @@ func main() {
 	clientUser := &Auction.User{
 		Id:        int64(userId),
 		Name:      *clientName,
-		Timestamp: 0,
 	}
 
+	
+
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(port, grpc.WithInsecure())
+	conn, err := grpc.Dial(":5001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("could not connect: %v", err)
 	}
@@ -94,26 +100,57 @@ func main() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 
-			if strings.ToLower(scanner.Text()) == "exit" {
+			inputArray := strings.Fields(scanner.Text())
+
+			input := strings.ToLower(strings.TrimSpace(inputArray[0]))
+
+			if input == "exit" {
 				client.CloseConnection(context.Background(), clientUser)
 				os.Exit(1)
 			}
-			if strings.TrimSpace(scanner.Text()) != "" {
-				if strings.ToLower(scanner.Text()) == "bid" {
-					bid, err := strconv.Atoi(scanner.Text())
+
+			if input != "" {
+				if input == "result" {
+					nullMsg := &Auction.Void{}
+
+					resultReply, err := client.Result(context.Background(), nullMsg)
 					if err != nil {
-						log.Printf("Bid: Error %v", err)
-						break
+						log.Printf("Error receiving current auction result: %v", err)
+						client.CloseConnection(context.Background(), clientUser)
+						os.Exit(1)
+					}
+
+					if !resultReply.StillActive {
+						log.Printf("The auction is no longer active. Winner: %s bid: %d", resultReply.User.GetName(), resultReply.Amount)
+						client.CloseConnection(context.Background(), clientUser)
+						os.Exit(1)
+					} else {
+						log.Printf("The auction is still active. Current highest bid: %d. By: %s", resultReply.Amount, resultReply.User.Name)
+					}
+
+				} else if input == "bid" {
+					if len(inputArray) > 0 {
+						bid, err := strconv.Atoi(inputArray[1])
+
+						if err != nil {
+							//log.Printf("Bid: Error %v", err)
+							log.Println("The Auction House only accepts real integers as currency")
+						}
+
 						Bidmsg := &Auction.BidMessage{
 							Amount:    int32(bid),
 							User:      clientUser,
-							Timestamp: clientUser.Timestamp,
 						}
-						_, err := client.Bid(context.Background(), Bidmsg)
+
+						reply, err := client.Bid(context.Background(), Bidmsg)
 						if err != nil {
 							log.Printf("Error publishing Message: %v", err)
 							break
 						}
+						log.Printf("Auction House: Ack(%d)", reply.Timestamp)
+						log.Printf("bid: %s", translateReturn(reply.ReturnType))
+					} else {
+						log.Println("Please input a number after your bid.")
 					}
 				}
 			}

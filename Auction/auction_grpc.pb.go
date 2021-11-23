@@ -19,10 +19,14 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuctionHouseClient interface {
 	OpenConnection(ctx context.Context, in *Connect, opts ...grpc.CallOption) (AuctionHouse_OpenConnectionClient, error)
-	CloseConnection(ctx context.Context, in *User, opts ...grpc.CallOption) (*Close, error)
+	CloseConnection(ctx context.Context, in *User, opts ...grpc.CallOption) (*Void, error)
 	Bid(ctx context.Context, in *BidMessage, opts ...grpc.CallOption) (*BidReply, error)
-	Result(ctx context.Context, in *ResultMessage, opts ...grpc.CallOption) (*ResultMessage, error)
-	Broadcast(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error)
+	Result(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ResultMessage, error)
+	Broadcast(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error)
+	Replicate(ctx context.Context, in *BidMessage, opts ...grpc.CallOption) (*BidReply, error)
+	GetID(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Message, error)
+	RegisterPulse(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error)
+	RingElection(ctx context.Context, in *RingMessage, opts ...grpc.CallOption) (*Void, error)
 }
 
 type auctionHouseClient struct {
@@ -65,8 +69,8 @@ func (x *auctionHouseOpenConnectionClient) Recv() (*Message, error) {
 	return m, nil
 }
 
-func (c *auctionHouseClient) CloseConnection(ctx context.Context, in *User, opts ...grpc.CallOption) (*Close, error) {
-	out := new(Close)
+func (c *auctionHouseClient) CloseConnection(ctx context.Context, in *User, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/CloseConnection", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -83,7 +87,7 @@ func (c *auctionHouseClient) Bid(ctx context.Context, in *BidMessage, opts ...gr
 	return out, nil
 }
 
-func (c *auctionHouseClient) Result(ctx context.Context, in *ResultMessage, opts ...grpc.CallOption) (*ResultMessage, error) {
+func (c *auctionHouseClient) Result(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ResultMessage, error) {
 	out := new(ResultMessage)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/Result", in, out, opts...)
 	if err != nil {
@@ -92,9 +96,45 @@ func (c *auctionHouseClient) Result(ctx context.Context, in *ResultMessage, opts
 	return out, nil
 }
 
-func (c *auctionHouseClient) Broadcast(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Close, error) {
-	out := new(Close)
+func (c *auctionHouseClient) Broadcast(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/Broadcast", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) Replicate(ctx context.Context, in *BidMessage, opts ...grpc.CallOption) (*BidReply, error) {
+	out := new(BidReply)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/Replicate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) GetID(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Message, error) {
+	out := new(Message)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/getID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) RegisterPulse(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/RegisterPulse", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) RingElection(ctx context.Context, in *RingMessage, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/RingElection", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,10 +146,14 @@ func (c *auctionHouseClient) Broadcast(ctx context.Context, in *Message, opts ..
 // for forward compatibility
 type AuctionHouseServer interface {
 	OpenConnection(*Connect, AuctionHouse_OpenConnectionServer) error
-	CloseConnection(context.Context, *User) (*Close, error)
+	CloseConnection(context.Context, *User) (*Void, error)
 	Bid(context.Context, *BidMessage) (*BidReply, error)
-	Result(context.Context, *ResultMessage) (*ResultMessage, error)
-	Broadcast(context.Context, *Message) (*Close, error)
+	Result(context.Context, *Void) (*ResultMessage, error)
+	Broadcast(context.Context, *Message) (*Void, error)
+	Replicate(context.Context, *BidMessage) (*BidReply, error)
+	GetID(context.Context, *Void) (*Message, error)
+	RegisterPulse(context.Context, *Message) (*Void, error)
+	RingElection(context.Context, *RingMessage) (*Void, error)
 	mustEmbedUnimplementedAuctionHouseServer()
 }
 
@@ -120,17 +164,29 @@ type UnimplementedAuctionHouseServer struct {
 func (UnimplementedAuctionHouseServer) OpenConnection(*Connect, AuctionHouse_OpenConnectionServer) error {
 	return status.Errorf(codes.Unimplemented, "method OpenConnection not implemented")
 }
-func (UnimplementedAuctionHouseServer) CloseConnection(context.Context, *User) (*Close, error) {
+func (UnimplementedAuctionHouseServer) CloseConnection(context.Context, *User) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseConnection not implemented")
 }
 func (UnimplementedAuctionHouseServer) Bid(context.Context, *BidMessage) (*BidReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Bid not implemented")
 }
-func (UnimplementedAuctionHouseServer) Result(context.Context, *ResultMessage) (*ResultMessage, error) {
+func (UnimplementedAuctionHouseServer) Result(context.Context, *Void) (*ResultMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Result not implemented")
 }
-func (UnimplementedAuctionHouseServer) Broadcast(context.Context, *Message) (*Close, error) {
+func (UnimplementedAuctionHouseServer) Broadcast(context.Context, *Message) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Broadcast not implemented")
+}
+func (UnimplementedAuctionHouseServer) Replicate(context.Context, *BidMessage) (*BidReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Replicate not implemented")
+}
+func (UnimplementedAuctionHouseServer) GetID(context.Context, *Void) (*Message, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetID not implemented")
+}
+func (UnimplementedAuctionHouseServer) RegisterPulse(context.Context, *Message) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterPulse not implemented")
+}
+func (UnimplementedAuctionHouseServer) RingElection(context.Context, *RingMessage) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RingElection not implemented")
 }
 func (UnimplementedAuctionHouseServer) mustEmbedUnimplementedAuctionHouseServer() {}
 
@@ -203,7 +259,7 @@ func _AuctionHouse_Bid_Handler(srv interface{}, ctx context.Context, dec func(in
 }
 
 func _AuctionHouse_Result_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResultMessage)
+	in := new(Void)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -215,7 +271,7 @@ func _AuctionHouse_Result_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/Auction.AuctionHouse/Result",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuctionHouseServer).Result(ctx, req.(*ResultMessage))
+		return srv.(AuctionHouseServer).Result(ctx, req.(*Void))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -234,6 +290,78 @@ func _AuctionHouse_Broadcast_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuctionHouseServer).Broadcast(ctx, req.(*Message))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_Replicate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BidMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).Replicate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/Replicate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).Replicate(ctx, req.(*BidMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_GetID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).GetID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/getID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).GetID(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_RegisterPulse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Message)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).RegisterPulse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/RegisterPulse",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).RegisterPulse(ctx, req.(*Message))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_RingElection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RingMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).RingElection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/RingElection",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).RingElection(ctx, req.(*RingMessage))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -260,6 +388,22 @@ var AuctionHouse_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Broadcast",
 			Handler:    _AuctionHouse_Broadcast_Handler,
+		},
+		{
+			MethodName: "Replicate",
+			Handler:    _AuctionHouse_Replicate_Handler,
+		},
+		{
+			MethodName: "getID",
+			Handler:    _AuctionHouse_GetID_Handler,
+		},
+		{
+			MethodName: "RegisterPulse",
+			Handler:    _AuctionHouse_RegisterPulse_Handler,
+		},
+		{
+			MethodName: "RingElection",
+			Handler:    _AuctionHouse_RingElection_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
