@@ -431,7 +431,8 @@ func main() {
 	go s.Pulse()
 
 	// If the file doesn't exist, create it or append to the file. For append functionality : os.O_APPEND
-	file, err := os.OpenFile("logs.txt", os.O_CREATE|os.O_WRONLY, 0666)
+	filename := strconv.Itoa(s.ID) + "logs.txt"
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
