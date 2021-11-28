@@ -6,7 +6,6 @@ import (
 	"flag"
 	"io"
 	"log"
-	"math"
 	"net"
 	"os"
 	"strconv"
@@ -53,6 +52,7 @@ type Server struct {
 	Port            int32
 	state           STATE
 	replyCounter    int
+	queue           customQueue
 }
 
 func (s *Server) Pulse() {
@@ -80,19 +80,24 @@ func (s *Server) Pulse() {
 					}
 				}
 			}()
-		} else if math.Abs(float64(time.Now().Second()-s.PrimePulse.Second())) > 19 {
+		} else if time.Since(s.PrimePulse).Seconds() > time.Second.Seconds()*19 && s.state != WANTED && s.state != HELD {
 			s.ServerTimestamp.Tick()
-			log.Printf("Missing pulse from prime replica. Last Pulse: %v seconds ago(%d)", math.Abs(float64(time.Now().Second()-s.PrimePulse.Second())), s.ServerTimestamp.GetTime())
+			log.Printf("Missing pulse from prime replica. Last Pulse: %v seconds ago", time.Now().Sub(s.PrimePulse))
 
 			log.Printf("Leader election called")
 
 			msg := Auction.RequestMessage{
 				ServerId:  int32(s.ID),
 				Timestamp: int32(s.ServerTimestamp.GetTime()),
+				Port:      s.Port,
 			}
 
-			s.AccessCritical(context.Background(), &msg)
+			_, err := s.AccessCritical(context.Background(), &msg)
+			if err != nil {
+				log.Fatalf("Failed to access critical: %v", err)
+			}
 			log.Printf("Fuck Rasmus")
+
 		}
 	}
 }
@@ -107,7 +112,7 @@ func (s *Server) RegisterPulse(ctx context.Context, msg *Auction.Message) (*Auct
 
 func (s *Server) ReplicateBackups(ctx context.Context, HighestBid int32, HighestBidder string) { //kan være vi skal return en samlet ack ye
 	for i := 0; i < len(s.Ports); i++ {
-		if i != int(s.ID) {
+		if s.Ports[i] != s.Port {
 			conn, err := grpc.Dial(":"+strconv.Itoa(int(s.Ports[i])), grpc.WithInsecure())
 
 			if err != nil {
@@ -388,6 +393,8 @@ func main() {
 		ports = append(ports, int32(nextPort))
 	}
 
+	queue := &customQueue{queue: make([]int, 0)}
+
 	s := &Server{
 		ID:                              *id,
 		Connections:                     connections,
@@ -398,6 +405,9 @@ func main() {
 		lock:                            sync.Mutex{},
 		Ports:                           ports,
 		Port:                            ports[*id],
+		PrimePulse:                      time.Now(),
+		state:                           RELEASED,
+		queue:                           *queue,
 	}
 
 	//go s.StartAuction(time.Second * 100)
@@ -514,3 +524,181 @@ func (s *Server) StartAuction(Duration time.Duration) {
 	log.Printf("Auctioneer: Auction closed. Highest bid: %d by %s", s.HighestBid, s.HighestBidder.Name)
 }
 */
+
+func (s *Server) AccessCritical(ctx context.Context, requestMessage *Auction.RequestMessage) (*Auction.ReplyMessage, error) {
+	log.Printf("%d, Stamp: %d Requesting access to leader election", s.ID, s.ServerTimestamp.GetTime())
+	log.Printf("----------------------------------------------------------")
+	s.state = WANTED
+	s.MessageAll(ctx, requestMessage)
+	reply := Auction.ReplyMessage{Timestamp: int32(s.ServerTimestamp.GetTime()), ServerId: int32(s.ID), Port: s.Port}
+
+	return &reply, nil
+}
+
+func (s *Server) MessageAll(ctx context.Context, msg *Auction.RequestMessage) error {
+	for i := 0; i < len(s.Ports); i++ {
+		if i != s.ID {
+			conn, err := grpc.Dial(":"+strconv.Itoa(int(s.Ports[i])), grpc.WithInsecure())
+
+			if err != nil {
+				log.Fatalf("Failed to dial this port(Message all): %v", err)
+			}
+			defer conn.Close()
+			client := Auction.NewAuctionHouseClient(conn)
+
+			client.ReceiveRequest(ctx, msg)
+		}
+	}
+	return nil
+}
+
+func (s *Server) ReceiveRequest(ctx context.Context, requestMessage *Auction.RequestMessage) (*Auction.Void, error) {
+	log.Printf("%d received request from: %d", s.ID, requestMessage.ServerId)
+	log.Printf("----------------------------------------------------------")
+
+	// UPDATE TIMESTAMP HER?
+
+	void := Auction.Void{}
+
+	if s.shouldDefer(requestMessage) {
+		log.Printf("%d is not accepting request from: %d", s.ID, requestMessage.ServerId)
+		log.Printf("----------------------------------------------------------")
+		s.queue.Enqueue(int(requestMessage.Port))
+		return &void, nil
+	} else {
+		log.Printf("%d is sending reply to: %d", s.ID, requestMessage.ServerId)
+		log.Printf("----------------------------------------------------------")
+		s.SendReply(requestMessage.Port)
+		return &void, nil
+	}
+}
+
+func (s *Server) shouldDefer(requestMessage *Auction.RequestMessage) bool {
+	if s.state == HELD {
+		return true
+	}
+
+	if s.state != WANTED {
+		return false
+	}
+
+	if int32(s.ServerTimestamp.GetTime()) < requestMessage.Timestamp {
+		return true
+	}
+
+	if int32(s.ServerTimestamp.GetTime()) == requestMessage.Timestamp && s.ID < int(requestMessage.ServerId) {
+		return true
+	}
+
+	return false
+}
+
+func (s *Server) SendReply(port int32) {
+
+	conn, err := grpc.Dial(":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Failed to connect to port: %v", err)
+	}
+	defer conn.Close()
+	client := Auction.NewAuctionHouseClient(conn)
+	client.ReceiveReply(context.Background(), &Auction.ReplyMessage{})
+}
+
+func (s *Server) ReceiveReply(ctx context.Context, replyMessage *Auction.ReplyMessage) (*Auction.Void, error) {
+
+	s.replyCounter++
+
+	if s.replyCounter == len(s.Ports)-2 {
+		s.EnterCriticalSection()
+	}
+	//UPDATE TIMESTAMP HER?
+
+	return &Auction.Void{}, nil
+}
+
+func (s *Server) EnterCriticalSection() {
+	s.state = HELD
+	log.Printf("%d entered the critical section", s.ID)
+	log.Printf("----------------------------------------------------------")
+
+	//UPDATE TIMESTAMP HER?
+
+	s.CallRingElection(context.Background())
+
+	s.LeaveCriticalSection()
+}
+
+func (s *Server) LeaveCriticalSection() {
+	log.Printf("%d is leaving the critical section", s.ID)
+	log.Printf("----------------------------------------------------------")
+	s.state = RELEASED
+	//UPDATE TIMESTAMP HER?
+	s.replyCounter = 0
+
+	for !s.queue.Empty() {
+		index := s.queue.Front()
+		s.queue.Dequeue()
+		log.Printf("%d: reply to defered request", s.ID)
+		log.Printf("----------------------------------------------------------")
+		s.CallSetStateReleased(index)
+	}
+}
+
+func (s *Server) CallSetStateReleased(index int) {
+
+	port := s.FindIndex(int32(index))
+	conn, err := grpc.Dial(":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Failed to connect to port: %v", err)
+	}
+	defer conn.Close()
+	client := Auction.NewAuctionHouseClient(conn)
+	client.SetStateReleased(context.Background(), &Auction.Void{})
+}
+
+func (s *Server) SetStateReleased(ctx context.Context, void *Auction.Void) (*Auction.Void, error) {
+
+	s.state = RELEASED
+
+	return &Auction.Void{}, nil
+}
+
+/*
+QUEUE
+*/
+
+type customQueue struct {
+	queue []int
+	lock  sync.RWMutex
+}
+
+func (c *customQueue) Enqueue(name int) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.queue = append(c.queue, name)
+}
+
+func (c *customQueue) Dequeue() {
+	if len(c.queue) > 0 {
+		c.lock.Lock()
+		defer c.lock.Unlock()
+		c.queue = c.queue[1:]
+	}
+}
+
+func (c *customQueue) Front() int {
+	if len(c.queue) > 0 {
+		c.lock.Lock()
+		defer c.lock.Unlock()
+		return c.queue[0]
+	}
+	return -1
+}
+
+func (c *customQueue) Size() int {
+	return len(c.queue)
+}
+
+func (c *customQueue) Empty() bool {
+	return len(c.queue) == 0
+}

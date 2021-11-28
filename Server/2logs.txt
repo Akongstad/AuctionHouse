@@ -1,15 +1,37 @@
-2021/11/28 16:09:25 Auction open at: [::]:5750
-2021/11/28 16:09:26 Received pulse from prime replica(3)
-2021/11/28 16:09:36 Received pulse from prime replica(4)
-2021/11/28 16:10:05 Missing pulse from prime replica. Last Pulse: 31 seconds ago(5)
-2021/11/28 16:10:05 Leader election called
-2021/11/28 16:10:05 Fuck Rasmus
-2021/11/28 16:10:15 Missing pulse from prime replica. Last Pulse: 21 seconds ago(6)
-2021/11/28 16:10:15 Leader election called
-2021/11/28 16:10:15 Fuck Rasmus
-:25 Prime replica: Pulse(8)
-:35:24 Prime replica: Pulse(9)
-2021/11/28 14:35:34 Prime replica: Pulse(10)
-2021/11/28 14:35:44 Prime replica: Pulse(11)
-2021/11/28 14:35:45 Received pulse from prime replica(17)
-2021/11/28 14:35:54 Prime replica: Pulse(18)
+2021/11/28 18:20:53 Auction open at: [::]:5750
+2021/11/28 18:20:53 Received pulse from prime replica(2)
+2021/11/28 18:21:02 Received pulse from prime replica(3)
+2021/11/28 18:21:23 Missing pulse from prime replica. Last Pulse: 20.9388543s seconds ago
+2021/11/28 18:21:23 Leader election called
+2021/11/28 18:21:23 2, Stamp: 4 Requesting access to leader election
+2021/11/28 18:21:23 ----------------------------------------------------------
+2021/11/28 18:21:25 2 entered the critical section
+2021/11/28 18:21:25 ----------------------------------------------------------
+2021/11/28 18:21:25 New leader at: [::]:5001
+2021/11/28 18:21:25 Server stopped listening
+2021/11/28 18:21:25 2 is leaving the critical section
+2021/11/28 18:21:25 ----------------------------------------------------------
+2021/11/28 18:21:25 0
+2021/11/28 18:21:25 0
+2021/11/28 18:21:25 Fuck Rasmus
+2021/11/28 18:21:35 Prime replica: Pulse(5)
+2021/11/28 18:21:45 Prime replica: Pulse(6)
+2021/11/28 18:21:55 Prime replica: Pulse(7)
+2021/11/28 18:22:05 Prime replica: Pulse(8)
+2021/11/28 18:22:15 Prime replica: Pulse(9)
+2021/11/28 18:22:25 Prime replica: Pulse(10)
+2021/11/28 18:22:35 Prime replica: Pulse(11)
+0)
+2021/11/28 17:47:39 Received pulse from prime replica(11)
+Stamp: 7 Requesting access to leader election
+2021/11/28 17:19:15 ----------------------------------------------------------
+2021/11/28 17:19:17 Fuck Rasmus
+2021/11/28 17:19:26 2 received request from: 1
+2021/11/28 17:19:26 ----------------------------------------------------------
+2021/11/28 17:19:26 2 is not accepting request from: 1
+2021/11/28 17:19:26 ----------------------------------------------------------
+------
+2021/11/28 16:54:59 2 received request from: 2
+2021/11/28 16:54:59 ----------------------------------------------------------
+2021/11/28 16:54:59 2 is sending reply to: 2
+2021/11/28 16:54:59 ----------------------------------------------------------

@@ -1,12 +1,24 @@
-2021/11/28 16:09:05 Auction open at: [::]:5001
-2021/11/28 16:09:15 Prime replica: Pulse(1)
-2021/11/28 16:09:26 Prime replica: Pulse(2)
-2021/11/28 16:09:36 Prime replica: Pulse(3)
-2021/11/28 16:05:42 Prime replica: Pulse(4)
-21/11/28 14:35:45 Prime replica: Pulse(16)
-2021/11/28 14:35:47 Received pulse from prime replica(19)
-:09:51 Prime replica: Pulse(7)
-2021/11/28 14:10:01 Prime replica: Pulse(8)
-2021/11/28 14:10:11 Prime replica: Pulse(9)
-2021/11/28 14:10:21 Prime replica: Pulse(10)
-2021/11/28 14:10:31 Prime replica: Pulse(11)
+2021/11/28 18:20:42 Auction open at: [::]:5001
+2021/11/28 18:20:52 Prime replica: Pulse(1)
+2021/11/28 18:21:02 Prime replica: Pulse(2)
+2021/11/28 18:10:29 Prime replica: Pulse(3)
+2021/11/28 18:10:39 Prime replica: Pulse(4)
+28 18:09:37 19 sekunder: 19
+2021/11/28 18:09:43 Prime replica: Pulse(2)
+2021/11/28 18:09:45 19 sekunder: 22.0584271
+2021/11/28 18:09:45 19 sekunder: 19
+2021/11/28 18:09:47 19 sekunder: 24.0977769
+2021/11/28 18:09:47 19 sekunder: 19
+8:08:14 Prime replica: Pulse(3)
+2021/11/28 18:08:14 19 sekunder: 1.9e+10
+2021/11/28 18:08:14 19 sekunder: 19
+2021/11/28 18:08:14 19 sekunder: 1.9e+10
+2021/11/28 18:08:14 19 sekunder: 19
+-
+2021/11/28 17:47:09 0 is sending reply to: 2
+2021/11/28 17:47:09 ----------------------------------------------------------
+2021/11/28 17:47:09 Prime replica: Pulse(6)
+2021/11/28 17:47:19 Prime replica: Pulse(7)
+2021/11/28 17:47:29 Prime replica: Pulse(8)
+2021/11/28 17:47:39 Prime replica: Pulse(9)
+2021/11/28 17:47:49 Prime replica: Pulse(10)

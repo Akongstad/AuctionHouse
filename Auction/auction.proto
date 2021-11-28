@@ -57,11 +57,13 @@ message PortIndex{
 message RequestMessage{
     int32 serverId = 1;
     int32 timestamp = 2;
+    int32 port = 3;
 }
 
 message ReplyMessage{
     int32 serverId = 1;
     int32 timestamp = 2;
+    int32 port = 3;
 }
 
 service AuctionHouse{
@@ -80,4 +82,5 @@ service AuctionHouse{
     rpc AccessCritical(RequestMessage) returns(ReplyMessage){}
     rpc ReceiveRequest(RequestMessage) returns(Void){}
     rpc ReceiveReply(ReplyMessage) returns(Void){}
+    rpc SetStateReleased(Void) returns(Void){}
 }
