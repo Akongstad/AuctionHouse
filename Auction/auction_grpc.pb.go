@@ -26,8 +26,13 @@ type AuctionHouseClient interface {
 	Replicate(ctx context.Context, in *ReplicateMessage, opts ...grpc.CallOption) (*BidReply, error)
 	GetID(ctx context.Context, in *Void, opts ...grpc.CallOption) (*PortIndex, error)
 	RegisterPulse(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Void, error)
-	RingElection(ctx context.Context, in *RingMessage, opts ...grpc.CallOption) (*Void, error)
-	SelectNewLeader(ctx context.Context, in *NewLeaderMessage, opts ...grpc.CallOption) (*Void, error)
+	RingElection(ctx context.Context, in *ElectionPorts, opts ...grpc.CallOption) (*Void, error)
+	SelectNewLeader(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ElectionPorts, error)
+	BroadcastNewLeader(ctx context.Context, in *ElectionPorts, opts ...grpc.CallOption) (*Void, error)
+	//Ricart And Agrawala
+	AccessCritical(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*ReplyMessage, error)
+	ReceiveRequest(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*Void, error)
+	ReceiveReply(ctx context.Context, in *ReplyMessage, opts ...grpc.CallOption) (*Void, error)
 }
 
 type auctionHouseClient struct {
@@ -133,7 +138,7 @@ func (c *auctionHouseClient) RegisterPulse(ctx context.Context, in *Message, opt
 	return out, nil
 }
 
-func (c *auctionHouseClient) RingElection(ctx context.Context, in *RingMessage, opts ...grpc.CallOption) (*Void, error) {
+func (c *auctionHouseClient) RingElection(ctx context.Context, in *ElectionPorts, opts ...grpc.CallOption) (*Void, error) {
 	out := new(Void)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/RingElection", in, out, opts...)
 	if err != nil {
@@ -142,9 +147,45 @@ func (c *auctionHouseClient) RingElection(ctx context.Context, in *RingMessage, 
 	return out, nil
 }
 
-func (c *auctionHouseClient) SelectNewLeader(ctx context.Context, in *NewLeaderMessage, opts ...grpc.CallOption) (*Void, error) {
-	out := new(Void)
+func (c *auctionHouseClient) SelectNewLeader(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ElectionPorts, error) {
+	out := new(ElectionPorts)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/SelectNewLeader", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) BroadcastNewLeader(ctx context.Context, in *ElectionPorts, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/BroadcastNewLeader", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) AccessCritical(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*ReplyMessage, error) {
+	out := new(ReplyMessage)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/AccessCritical", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) ReceiveRequest(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/ReceiveRequest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) ReceiveReply(ctx context.Context, in *ReplyMessage, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/ReceiveReply", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +204,13 @@ type AuctionHouseServer interface {
 	Replicate(context.Context, *ReplicateMessage) (*BidReply, error)
 	GetID(context.Context, *Void) (*PortIndex, error)
 	RegisterPulse(context.Context, *Message) (*Void, error)
-	RingElection(context.Context, *RingMessage) (*Void, error)
-	SelectNewLeader(context.Context, *NewLeaderMessage) (*Void, error)
+	RingElection(context.Context, *ElectionPorts) (*Void, error)
+	SelectNewLeader(context.Context, *Void) (*ElectionPorts, error)
+	BroadcastNewLeader(context.Context, *ElectionPorts) (*Void, error)
+	//Ricart And Agrawala
+	AccessCritical(context.Context, *RequestMessage) (*ReplyMessage, error)
+	ReceiveRequest(context.Context, *RequestMessage) (*Void, error)
+	ReceiveReply(context.Context, *ReplyMessage) (*Void, error)
 	mustEmbedUnimplementedAuctionHouseServer()
 }
 
@@ -196,11 +242,23 @@ func (UnimplementedAuctionHouseServer) GetID(context.Context, *Void) (*PortIndex
 func (UnimplementedAuctionHouseServer) RegisterPulse(context.Context, *Message) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterPulse not implemented")
 }
-func (UnimplementedAuctionHouseServer) RingElection(context.Context, *RingMessage) (*Void, error) {
+func (UnimplementedAuctionHouseServer) RingElection(context.Context, *ElectionPorts) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RingElection not implemented")
 }
-func (UnimplementedAuctionHouseServer) SelectNewLeader(context.Context, *NewLeaderMessage) (*Void, error) {
+func (UnimplementedAuctionHouseServer) SelectNewLeader(context.Context, *Void) (*ElectionPorts, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SelectNewLeader not implemented")
+}
+func (UnimplementedAuctionHouseServer) BroadcastNewLeader(context.Context, *ElectionPorts) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastNewLeader not implemented")
+}
+func (UnimplementedAuctionHouseServer) AccessCritical(context.Context, *RequestMessage) (*ReplyMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AccessCritical not implemented")
+}
+func (UnimplementedAuctionHouseServer) ReceiveRequest(context.Context, *RequestMessage) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReceiveRequest not implemented")
+}
+func (UnimplementedAuctionHouseServer) ReceiveReply(context.Context, *ReplyMessage) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReceiveReply not implemented")
 }
 func (UnimplementedAuctionHouseServer) mustEmbedUnimplementedAuctionHouseServer() {}
 
@@ -363,7 +421,7 @@ func _AuctionHouse_RegisterPulse_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _AuctionHouse_RingElection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RingMessage)
+	in := new(ElectionPorts)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -375,13 +433,13 @@ func _AuctionHouse_RingElection_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: "/Auction.AuctionHouse/RingElection",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuctionHouseServer).RingElection(ctx, req.(*RingMessage))
+		return srv.(AuctionHouseServer).RingElection(ctx, req.(*ElectionPorts))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AuctionHouse_SelectNewLeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NewLeaderMessage)
+	in := new(Void)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -393,7 +451,79 @@ func _AuctionHouse_SelectNewLeader_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/Auction.AuctionHouse/SelectNewLeader",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuctionHouseServer).SelectNewLeader(ctx, req.(*NewLeaderMessage))
+		return srv.(AuctionHouseServer).SelectNewLeader(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_BroadcastNewLeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ElectionPorts)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).BroadcastNewLeader(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/BroadcastNewLeader",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).BroadcastNewLeader(ctx, req.(*ElectionPorts))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_AccessCritical_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).AccessCritical(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/AccessCritical",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).AccessCritical(ctx, req.(*RequestMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_ReceiveRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).ReceiveRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/ReceiveRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).ReceiveRequest(ctx, req.(*RequestMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_ReceiveReply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplyMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).ReceiveReply(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/ReceiveReply",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).ReceiveReply(ctx, req.(*ReplyMessage))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -440,6 +570,22 @@ var AuctionHouse_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SelectNewLeader",
 			Handler:    _AuctionHouse_SelectNewLeader_Handler,
+		},
+		{
+			MethodName: "BroadcastNewLeader",
+			Handler:    _AuctionHouse_BroadcastNewLeader_Handler,
+		},
+		{
+			MethodName: "AccessCritical",
+			Handler:    _AuctionHouse_AccessCritical_Handler,
+		},
+		{
+			MethodName: "ReceiveRequest",
+			Handler:    _AuctionHouse_ReceiveRequest_Handler,
+		},
+		{
+			MethodName: "ReceiveReply",
+			Handler:    _AuctionHouse_ReceiveReply_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
