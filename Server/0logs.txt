@@ -1,0 +1,12 @@
+2021/11/28 16:09:05 Auction open at: [::]:5001
+2021/11/28 16:09:15 Prime replica: Pulse(1)
+2021/11/28 16:09:26 Prime replica: Pulse(2)
+2021/11/28 16:09:36 Prime replica: Pulse(3)
+2021/11/28 16:05:42 Prime replica: Pulse(4)
+21/11/28 14:35:45 Prime replica: Pulse(16)
+2021/11/28 14:35:47 Received pulse from prime replica(19)
+:09:51 Prime replica: Pulse(7)
+2021/11/28 14:10:01 Prime replica: Pulse(8)
+2021/11/28 14:10:11 Prime replica: Pulse(9)
+2021/11/28 14:10:21 Prime replica: Pulse(10)
+2021/11/28 14:10:31 Prime replica: Pulse(11)

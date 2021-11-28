@@ -1,0 +1,15 @@
+2021/11/28 16:09:25 Auction open at: [::]:5750
+2021/11/28 16:09:26 Received pulse from prime replica(3)
+2021/11/28 16:09:36 Received pulse from prime replica(4)
+2021/11/28 16:10:05 Missing pulse from prime replica. Last Pulse: 31 seconds ago(5)
+2021/11/28 16:10:05 Leader election called
+2021/11/28 16:10:05 Fuck Rasmus
+2021/11/28 16:10:15 Missing pulse from prime replica. Last Pulse: 21 seconds ago(6)
+2021/11/28 16:10:15 Leader election called
+2021/11/28 16:10:15 Fuck Rasmus
+:25 Prime replica: Pulse(8)
+:35:24 Prime replica: Pulse(9)
+2021/11/28 14:35:34 Prime replica: Pulse(10)
+2021/11/28 14:35:44 Prime replica: Pulse(11)
+2021/11/28 14:35:45 Received pulse from prime replica(17)
+2021/11/28 14:35:54 Prime replica: Pulse(18)

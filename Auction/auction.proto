@@ -46,18 +46,22 @@ message Connect{
 
 message Void{}
 
-message RingMessage{
+message ElectionPorts{
     repeated int32 listOfPorts = 1;
-    int32 brokenPort = 2;
-}
-
-message NewLeaderMessage{
-    repeated int32 listOfPorts = 1;
-    int32 leader = 2;
 }
 
 message PortIndex{
     int32 index = 1;
+}
+
+message RequestMessage{
+    int32 serverId = 1;
+    int32 timestamp = 2;
+}
+
+message ReplyMessage{
+    int32 serverId = 1;
+    int32 timestamp = 2;
 }
 
 service AuctionHouse{
@@ -69,6 +73,11 @@ service AuctionHouse{
     rpc Replicate(ReplicateMessage) returns (BidReply){}
     rpc getID(Void) returns (PortIndex){}
     rpc RegisterPulse(Message) returns (Void){}
-    rpc RingElection(RingMessage) returns (Void){}
-    rpc SelectNewLeader(NewLeaderMessage) returns (Void){}
+    rpc RingElection(ElectionPorts) returns (Void){}
+    rpc SelectNewLeader(Void) returns (ElectionPorts){}
+    rpc BroadcastNewLeader(ElectionPorts) returns (Void){}
+    //Ricart And Agrawala
+    rpc AccessCritical(RequestMessage) returns(ReplyMessage){}
+    rpc ReceiveRequest(RequestMessage) returns(Void){}
+    rpc ReceiveReply(ReplyMessage) returns(Void){}
 }
