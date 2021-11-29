@@ -1,0 +1,9 @@
+2021/11/29 19:25:37 Auction open at: [::]:5001
+2021/11/29 19:25:37 Server stopped listening
+37 Prime replica: Pulse(1)
+2021/11/29 19:24:47 Prime replica: Pulse(2)
+2021/11/29 19:24:57 Prime replica: Pulse(3)
+2021/11/29 19:25:07 Prime replica: Pulse(4)
+2021/11/29 19:25:17 Prime replica: Pulse(5)
+2021/11/29 19:25:27 Prime replica: Pulse(6)
+plica: Pulse(7)

@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "/Users/andreaskongstad/Documents/goLang/AuctionHouse/Auction";
+option go_package = "github.com/Akongstad/AuctionHouse/Auction";
 package Auction;
 
 
@@ -50,6 +50,15 @@ message ElectionPorts{
     repeated int32 listOfPorts = 1;
 }
 
+message PortsAndClocks{
+    repeated int32 listOfPorts = 1;
+    repeated uint32 listOfClocks = 2;
+}
+
+message CutOfMessage{
+    int32 port = 1;
+}
+
 message PortIndex{
     int32 index = 1;
 }
@@ -75,9 +84,10 @@ service AuctionHouse{
     rpc Replicate(ReplicateMessage) returns (BidReply){}
     rpc getID(Void) returns (PortIndex){}
     rpc RegisterPulse(Message) returns (Void){}
-    rpc RingElection(ElectionPorts) returns (Void){}
+    rpc RingElection(PortsAndClocks) returns (Void){}
     rpc SelectNewLeader(Void) returns (ElectionPorts){}
     rpc BroadcastNewLeader(ElectionPorts) returns (Void){}
+    rpc CutOfReplicate(CutOfMessage) returns (Void){}
     //Ricart And Agrawala
     rpc AccessCritical(RequestMessage) returns(ReplyMessage){}
     rpc ReceiveRequest(RequestMessage) returns(Void){}

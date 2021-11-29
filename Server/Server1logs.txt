@@ -1,0 +1,12 @@
+2021/11/29 19:16:36 Auction open at: [::]:5460
+2021/11/29 19:16:44 Received pulse from prime replica(2)
+2021/11/29 19:16:54 Received pulse from prime replica(3)
+2021/11/29 19:17:04 Received pulse from prime replica(4)
+2021/11/29 19:17:14 Received pulse from prime replica(5)
+2021/11/29 19:17:24 Received pulse from prime replica(6)
+2021/11/29 19:17:34 Received pulse from prime replica(7)
+2021/11/29 19:17:44 Received pulse from prime replica(8)
+2021/11/29 19:18:06 Missing pulse from prime replica. Last Pulse: 21.774496667s seconds ago
+2021/11/29 19:18:06 Leader election called
+2021/11/29 19:18:06 1, Stamp: 8 Requesting access to leader election
+2021/11/29 19:18:06 ----------------------------------------------------------
