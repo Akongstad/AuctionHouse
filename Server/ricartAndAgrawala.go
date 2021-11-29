@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"context"
 	"log"
@@ -120,3 +121,4 @@ func (s *Server) LeaveCriticalSection() {
 	//UPDATE TIMESTAMP HER?
 	s.replyCounter = 0
 }
+*/

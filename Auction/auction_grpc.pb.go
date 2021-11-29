@@ -33,6 +33,7 @@ type AuctionHouseClient interface {
 	AccessCritical(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*ReplyMessage, error)
 	ReceiveRequest(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*Void, error)
 	ReceiveReply(ctx context.Context, in *ReplyMessage, opts ...grpc.CallOption) (*Void, error)
+	SetStateReleased(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Void, error)
 }
 
 type auctionHouseClient struct {
@@ -192,6 +193,15 @@ func (c *auctionHouseClient) ReceiveReply(ctx context.Context, in *ReplyMessage,
 	return out, nil
 }
 
+func (c *auctionHouseClient) SetStateReleased(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/SetStateReleased", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuctionHouseServer is the server API for AuctionHouse service.
 // All implementations must embed UnimplementedAuctionHouseServer
 // for forward compatibility
@@ -211,6 +221,7 @@ type AuctionHouseServer interface {
 	AccessCritical(context.Context, *RequestMessage) (*ReplyMessage, error)
 	ReceiveRequest(context.Context, *RequestMessage) (*Void, error)
 	ReceiveReply(context.Context, *ReplyMessage) (*Void, error)
+	SetStateReleased(context.Context, *Void) (*Void, error)
 	mustEmbedUnimplementedAuctionHouseServer()
 }
 
@@ -259,6 +270,9 @@ func (UnimplementedAuctionHouseServer) ReceiveRequest(context.Context, *RequestM
 }
 func (UnimplementedAuctionHouseServer) ReceiveReply(context.Context, *ReplyMessage) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReceiveReply not implemented")
+}
+func (UnimplementedAuctionHouseServer) SetStateReleased(context.Context, *Void) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetStateReleased not implemented")
 }
 func (UnimplementedAuctionHouseServer) mustEmbedUnimplementedAuctionHouseServer() {}
 
@@ -528,6 +542,24 @@ func _AuctionHouse_ReceiveReply_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuctionHouse_SetStateReleased_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).SetStateReleased(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/SetStateReleased",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).SetStateReleased(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuctionHouse_ServiceDesc is the grpc.ServiceDesc for AuctionHouse service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -586,6 +618,10 @@ var AuctionHouse_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReceiveReply",
 			Handler:    _AuctionHouse_ReceiveReply_Handler,
+		},
+		{
+			MethodName: "SetStateReleased",
+			Handler:    _AuctionHouse_SetStateReleased_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
