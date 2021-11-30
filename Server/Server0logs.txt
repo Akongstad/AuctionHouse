@@ -1,26 +1,58 @@
-2021/11/30 11:25:13 Auction open at: [::]:5001
-2021/11/30 11:25:18 Prime replica: Pulse(1)
-2021/11/30 11:25:23 Prime replica: Pulse(2)
-2021/11/30 11:25:28 Prime replica: Pulse(3)
-2021/11/30 11:25:33 Prime replica: Pulse(4)
-2021/11/30 11:25:34 __________________________________
-2021/11/30 11:25:34 Auction House: Niclas has joined the auction!
-2021/11/30 11:16:50 Prime replica: Pulse(5)
-2021/11/30 11:16:55 Prime replica: Pulse(6)
-2021/11/30 11:16:57 __________________________________
-2021/11/30 11:16:57 Auction House: Andreas has joined the auction!
-2021/11/30 11:17:00 Prime replica: Pulse(7)
-2021/11/30 11:17:05 Prime replica: Pulse(8)
-2021/11/30 11:17:10 Prime replica: Pulse(9)
-2021/11/30 11:17:15 Prime replica: Pulse(10)
-2021/11/30 11:17:20 Prime replica: Pulse(11)
-2021/11/30 11:17:25 Prime replica: Pulse(12)
-2021/11/30 11:17:30 Prime replica: Pulse(13)
-2021/11/30 11:17:35 Prime replica: Pulse(14)
-1/29 20:15:01 Prime replica: Pulse(5)
-1/11/29 20:01:00 Highest bid: 55, by: Niclas
-2021/11/29 20:01:04 Highest bid: 56, by: Niclas
-2021/11/29 20:01:08 Highest bid: 599, by: Niclas
-2021/11/29 20:01:08 Prime replica: Pulse(13)
-2021/11/29 20:01:10 Highest bid: 599, by: Niclas
-2021/11/29 20:01:18 Prime replica: Pulse(17)
+2021/11/30 16:19:15 Auction open at: [::]:5001
+2021/11/30 16:19:37 __________________________________
+2021/11/30 16:19:37 Auction House: Niclas has joined the auction!
+2021/11/30 16:19:37 Broadcasting message to: Niclas
+2021/11/30 16:19:41 __________________________________
+2021/11/30 16:19:41 Auction House: Andreas has joined the auction!
+2021/11/30 16:19:41 Broadcasting message to: Niclas
+2021/11/30 16:19:41 Broadcasting message to: Andreas
+2021/11/30 16:19:45 __________________________________
+2021/11/30 16:19:45 Auction House: Rasmus has joined the auction!
+2021/11/30 16:19:45 Broadcasting message to: Niclas
+2021/11/30 16:19:45 Broadcasting message to: Andreas
+2021/11/30 16:19:45 Broadcasting message to: Rasmus
+2021/11/30 16:20:11 Highest bid: 100, by: Rasmus
+2021/11/30 16:20:17 Highest bid: 300, by: Niclas
+2021/11/30 16:09:15 Highest bid: 300, by: Rasmus
+30 14:39:17 Prime replica: Pulse(11)
+2021/11/30 14:39:20 Prime replica: Pulse(12)
+2021/11/30 14:39:23 Prime replica: Pulse(14)
+2021/11/30 14:39:24 Highest bid: 100, by: Niclas
+2021/11/30 14:39:26 Prime replica: Pulse(15)
+2021/11/30 14:39:29 Prime replica: Pulse(16)
+2021/11/30 14:39:32 Prime replica: Pulse(17)
+2021/11/30 14:39:35 Prime replica: Pulse(18)
+2021/11/30 14:39:38 Prime replica: Pulse(19)
+2021/11/30 14:39:41 Prime replica: Pulse(20)
+2021/11/30 14:39:44 Prime replica: Pulse(21)
+2021/11/30 14:39:47 Prime replica: Pulse(22)
+2021/11/30 14:39:50 Prime replica: Pulse(24)
+2021/11/30 14:39:53 Prime replica: Pulse(25)
+2021/11/30 14:39:56 Prime replica: Pulse(26)
+2021/11/30 14:39:59 Prime replica: Pulse(27)
+2021/11/30 14:40:02 Prime replica: Pulse(28)
+2021/11/30 14:40:05 Prime replica: Pulse(29)
+2021/11/30 14:40:08 Prime replica: Pulse(30)
+2021/11/30 14:40:11 Prime replica: Pulse(31)
+2021/11/30 14:33:34 Prime replica: Pulse(31)
+2021/11/30 14:33:37 Prime replica: Pulse(32)
+2021/11/30 14:33:40 Prime replica: Pulse(33)
+2021/11/30 14:33:43 Prime replica: Pulse(34)
+2021/11/30 14:33:46 Prime replica: Pulse(35)
+2021/11/30 14:33:49 Prime replica: Pulse(36)
+2021/11/30 14:33:52 Prime replica: Pulse(37)
+2021/11/30 14:33:55 Prime replica: Pulse(38)
+2021/11/30 14:33:58 Prime replica: Pulse(39)
+2021/11/30 14:34:01 Prime replica: Pulse(40)
+2021/11/30 14:34:04 Prime replica: Pulse(41)
+2021/11/30 14:34:07 Prime replica: Pulse(42)
+2021/11/30 14:34:10 Prime replica: Pulse(43)
+2021/11/30 14:34:13 Prime replica: Pulse(44)
+2021/11/30 14:34:16 Prime replica: Pulse(45)
+2021/11/30 14:34:19 Prime replica: Pulse(46)
+2021/11/30 14:34:22 Prime replica: Pulse(48)
+2021/11/30 14:34:25 Prime replica: Pulse(49)
+2021/11/30 14:34:28 Prime replica: Pulse(50)
+2021/11/30 14:34:31 Prime replica: Pulse(51)
+2021/11/30 14:34:34 Prime replica: Pulse(52)
+2021/11/30 14:34:37 Prime replica: Pulse(53)

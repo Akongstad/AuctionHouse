@@ -45,7 +45,7 @@ type Server struct {
 	HighestBidder Auction.User
 	StartTime     time.Time
 	Duration      time.Duration
-	Connections   []*Connection //altså bruger vi overhovedet det her lort længere
+	Connections   []*Connection
 	PrimePulse    time.Time
 	Auction.UnimplementedAuctionHouseServer
 	ServerTimestamp Auction.LamportClock
@@ -55,14 +55,15 @@ type Server struct {
 	state           STATE
 	replyCounter    int
 	queue           customQueue
+	grpcServer      *grpc.Server
 }
 
 func (s *Server) Pulse() {
 	for {
-		time.Sleep(time.Second * 5)
-		if s.Port == MainPort {
+		time.Sleep(time.Second * 3)
+		if s.GetPort() == MainPort {
 			s.ServerTimestamp.Tick()
-			log.Printf("Prime replica: Pulse(%v)", s.ServerTimestamp.GetTime())
+
 			go func() {
 				portIndex := s.FindIndex(s.Port)
 				for i := 0; i < len(s.Ports); i++ {
@@ -84,9 +85,9 @@ func (s *Server) Pulse() {
 					}
 				}
 			}()
-		} else if time.Since(s.PrimePulse).Seconds() > time.Second.Seconds()*8 && s.state != WANTED && s.state != HELD {
+		} else if time.Since(s.PrimePulse).Seconds() > time.Second.Seconds()*5 && s.state != WANTED && s.state != HELD {
 			s.ServerTimestamp.Tick()
-			log.Printf("Missing pulse from prime replica. Last Pulse: %v seconds ago", time.Now().Sub(s.PrimePulse))
+			log.Printf("Missing pulse from prime replica. Last Pulse: %v seconds ago", time.Since(s.PrimePulse))
 
 			log.Printf("Leader election called")
 
@@ -100,20 +101,19 @@ func (s *Server) Pulse() {
 			if err != nil {
 				log.Fatalf("Failed to access critical: %v", err)
 			}
-
 		}
 	}
 }
 
 func (s *Server) RegisterPulse(ctx context.Context, msg *Auction.Message) (*Auction.Void, error) {
-	log.Printf("Received pulse from prime replica(%d)", s.ServerTimestamp.GetTime())
+
 	s.ServerTimestamp.SyncClocks(msg.GetTimestamp())
-	s.PrimePulse = time.Now()
+	s.PrimePulse = time.Now().UTC()
 	return &Auction.Void{}, nil
 
 }
 
-func (s *Server) ReplicateBackups(ctx context.Context, HighestBid int32, HighestBidder string) { //kan være vi skal return en samlet ack ye
+func (s *Server) ReplicateBackups(ctx context.Context, HighestBid int32, HighestBidder *Auction.User) {
 
 	localWG := new(sync.WaitGroup)
 
@@ -132,8 +132,7 @@ func (s *Server) ReplicateBackups(ctx context.Context, HighestBid int32, Highest
 			client := Auction.NewAuctionHouseClient(conn)
 
 			repMsg := &Auction.ReplicateMessage{
-				Amount: s.HighestBid, User: &s.HighestBidder, Timestamp: s.ServerTimestamp.GetTime(),
-				AuctionStart: s.StartTime.String(),
+				Amount: HighestBid, User: HighestBidder, Timestamp: s.ServerTimestamp.GetTime(),
 			}
 
 			var bidReply *Auction.BidReply
@@ -151,7 +150,7 @@ func (s *Server) ReplicateBackups(ctx context.Context, HighestBid int32, Highest
 				defer localWG.Done()
 				time.Sleep(time.Second * 2)
 				if bidReply == nil {
-					//Der er intet svar. Gør et eller andet
+
 					s.CallCutOffReplicate(ctx, port)
 				}
 			}(currentPort)
@@ -195,12 +194,10 @@ func (s *Server) CutOfReplicate(ctx context.Context, msg *Auction.CutOfMessage) 
 func (s *Server) Replicate(ctx context.Context, update *Auction.ReplicateMessage) (*Auction.BidReply, error) {
 	s.HighestBid = update.Amount
 	s.HighestBidder = *update.User
-	Auctionstart, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", update.AuctionStart)
-	if err != nil {
-		log.Fatalf("Failed to parse starttime on replicate")
-	}
+
 	s.ServerTimestamp.SyncClocks(update.Timestamp)
-	s.StartTime = Auctionstart
+
+	log.Printf("Replicated: bid:%d, User: %s", s.HighestBid, s.HighestBidder.Name)
 	return &Auction.BidReply{
 		Timestamp:  s.ServerTimestamp.GetTime(),
 		ReturnType: 1,
@@ -248,7 +245,7 @@ func (s *Server) RingElection(ctx context.Context, msg *Auction.PortsAndClocks) 
 			if listOfClocks[i] > highestClock {
 				highestPort = listOfPorts[i]
 				highestClock = listOfClocks[i]
-			} else if listOfPorts[i] > highestPort {
+			} else if listOfClocks[i] == highestClock && listOfPorts[i] > highestPort {
 				highestPort = listOfPorts[i]
 				highestClock = listOfClocks[i]
 			}
@@ -269,7 +266,6 @@ func (s *Server) RingElection(ctx context.Context, msg *Auction.PortsAndClocks) 
 
 			indexOfMainPort := s.FindIndex(MainPort)
 
-			//Kald alle andre ports med den nye liste
 			for i := 0; i < len(newPortList.ListOfPorts); i++ {
 
 				if i != indexOfMainPort {
@@ -289,7 +285,6 @@ func (s *Server) RingElection(ctx context.Context, msg *Auction.PortsAndClocks) 
 	} else {
 		msg.ListOfPorts = append(msg.ListOfPorts, s.Port)
 
-		//Call RingElection på alle andre
 		index := s.FindIndex(s.Port)
 
 		nextPort := s.FindNextPort(index)
@@ -325,13 +320,26 @@ func (s *Server) SelectNewLeader(ctx context.Context, void *Auction.Void) (*Auct
 	s.Ports = removePort(s.Ports, int32(updatedPort))
 	s.Port = MainPort
 
-	// TODO Skal man slette der hvor den lyttede før
+	s.grpcServer = grpc.NewServer()
 
 	lis, err := net.Listen("tcp", ":"+strconv.Itoa(int(s.Port)))
 	if err != nil {
 		log.Fatalf("Failed to listen port: %v", err)
 	}
-	log.Printf("New leader at: %v", lis.Addr())
+
+	log.Printf("Auction open at: %v", lis.Addr())
+
+	Auction.RegisterAuctionHouseServer(s.grpcServer, s)
+	go func(listener net.Listener) {
+		defer func() {
+			lis.Close()
+			log.Printf("Server stopped listening")
+		}()
+
+		if err := s.grpcServer.Serve(listener); err != nil {
+			log.Fatalf("Failed to serve server: %v", err)
+		}
+	}(lis)
 
 	newPortList := Auction.ElectionPorts{
 		ListOfPorts: s.Ports,
@@ -347,9 +355,8 @@ func (s *Server) Bid(ctx context.Context, bid *Auction.BidMessage) (*Auction.Bid
 	if time.Now().UTC().Before(s.StartTime.Add(s.Duration)) {
 		if s.HighestBid < bid.Amount {
 
-			//jeg vil gerne ha en at replicateBackups returner en boolean, så vi kan give det korrekte returnType tilbage til client.
-			s.ReplicateBackups(ctx, s.HighestBid, s.HighestBidder.Name)
-			//så sætter vi ogs kun main replicas state til den nye, hvis det er gået igennem alle replicas? for at ha atomicity.
+			s.ReplicateBackups(ctx, bid.Amount, bid.User)
+
 			s.HighestBid = bid.Amount
 			s.HighestBidder = *bid.User
 
@@ -470,8 +477,10 @@ func (s *Server) Broadcast(ctx context.Context, msg *Auction.Message) (*Auction.
 
 func main() {
 	id := flag.Int("I", -1, "id")
+	AuctionTime := flag.Int("D", 100, "seconds")
 	flag.Parse()
-	var connections []*Connection
+
+	connections := make([]*Connection, 0)
 
 	portFile, err := os.Open("../ports.txt")
 	if err != nil {
@@ -494,29 +503,24 @@ func main() {
 		UnimplementedAuctionHouseServer: Auction.UnimplementedAuctionHouseServer{},
 		ServerTimestamp:                 Auction.LamportClock{},
 		lock:                            sync.Mutex{},
-		StartTime:                       time.Now().UTC(),
-		Duration:                        time.Second * 0,
 		Ports:                           ports,
 		Port:                            ports[*id],
 		PrimePulse:                      time.Now(),
 		state:                           RELEASED,
 		queue:                           *queue,
+		grpcServer:                      grpc.NewServer(),
 	}
-
-	go s.StartAuction(time.Second * 120)
+	go s.StartAuction(time.Second * time.Duration(*AuctionTime))
 	go s.Pulse()
 
-	// If the file doesn't exist, create it or append to the file. For append functionality : os.O_APPEND
 	filename := "Server" + strconv.Itoa(s.ID) + "logs.txt"
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//Create multiwriter
+
 	multiWriter := io.MultiWriter(os.Stdout, file)
 	log.SetOutput(multiWriter)
-
-	grpcServer := grpc.NewServer()
 
 	lis, err := net.Listen("tcp", ":"+strconv.Itoa(int(s.Port)))
 	if err != nil {
@@ -524,13 +528,13 @@ func main() {
 	}
 	log.Printf("Auction open at: %v", lis.Addr())
 
-	Auction.RegisterAuctionHouseServer(grpcServer, s)
+	Auction.RegisterAuctionHouseServer(s.grpcServer, s)
 	defer func() {
 		lis.Close()
 		log.Printf("Server stopped listening")
 	}()
 
-	if err := grpcServer.Serve(lis); err != nil {
+	if err := s.grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve server: %v", err)
 	}
 }
@@ -564,26 +568,6 @@ func (s *Server) FindNextPort(index int) string {
 	return ":" + strconv.Itoa(int(nextPort))
 }
 
-func (s *Server) listenToNew(port int32) {
-	grpcServer := grpc.NewServer()
-
-	lis, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
-	if err != nil {
-		log.Fatalf("Failed to listen port: %v", err)
-	}
-	log.Printf("Auction open at: %v", lis.Addr())
-
-	Auction.RegisterAuctionHouseServer(grpcServer, s)
-	defer func() {
-		lis.Close()
-		log.Printf("Server stopped listening")
-	}()
-
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve server: %v", err)
-	}
-}
-
 func removeConnection(slice []*Connection, i int) []*Connection {
 	slice[i] = slice[len(slice)-1]
 	return slice[:len(slice)-1]
@@ -595,24 +579,51 @@ func removePort(s []int32, i int32) []int32 {
 }
 
 func (s *Server) StartAuction(Duration time.Duration) {
-	s.StartTime = time.Now().UTC()
-	s.Duration = Duration
-	a, b, c := s.StartTime.Clock()
-	log.Printf("Auctioneer: Auction started at %d:%d:%d. On: %d. Duration will be: %v seconds", a, b, c, s.Port, s.Duration.Seconds())
-	/*s.ReplicateBackups(context.Background(), 0, "No bids")
+
+	if s.Port != MainPort {
+		conn, err := grpc.Dial(":"+strconv.Itoa(int(MainPort)), grpc.WithInsecure())
+		if err != nil {
+			log.Printf("Election: Failed to dial this port: %v", err)
+		} else {
+			defer conn.Close()
+
+			client := Auction.NewAuctionHouseClient(conn)
+			msg, err := client.PromptTimeAndDuration(context.Background(), &Auction.Void{})
+			if err != nil {
+				log.Fatalf("Failed to get time and duration from prime")
+			}
+			Auctionstart, err := time.Parse("2006-01-02 15:04:05 -0700 MST", msg.AuctionStart)
+			if err != nil {
+				log.Fatalf("Failed to parse starttime on replicate")
+			}
+			s.StartTime = Auctionstart
+
+			s.Duration = time.Duration(time.Second * time.Duration(msg.Duration))
+		}
+	} else {
+
+		s.StartTime = time.Now().UTC()
+		s.Duration = Duration
+	}
+	log.Printf("Auctioneer: Auction started at %d. Duration will be: %v seconds", s.Port, s.Duration.Seconds())
+
 	for {
 		time.Sleep(time.Second * 1)
-
-		if math.Abs(float64(time.Now().Second()-s.StartTime.Add(s.Duration).Second())) <= 3 {
-			log.Printf("Auctioneer: %v", math.Abs(float64(time.Now().Second()-s.StartTime.Add(s.Duration).Second())))
-			if math.Abs(float64(time.Now().Second()-s.StartTime.Add(s.Duration).Second())) <= 0 {
-				break
-			}
-
+		if time.Now().UTC().After(s.StartTime.Add(s.Duration)) {
+			break
 		}
-
 	}
-	log.Printf("Auctioneer: Auction closed. Highest bid: %d by %s", s.HighestBid, s.HighestBidder.Name)*/
+	log.Printf("Auctioneer: Auction closed. Highest bid: %d by %s", s.HighestBid, s.HighestBidder.Name)
+
+}
+
+func (s *Server) PromptTimeAndDuration(ctx context.Context, void *Auction.Void) (*Auction.TimeMessage, error) {
+	msg := Auction.TimeMessage{
+		AuctionStart: s.StartTime.String(),
+		Duration:     int32(s.Duration.Seconds()),
+	}
+
+	return &msg, nil
 }
 
 /*
@@ -620,8 +631,7 @@ func (s *Server) StartAuction(Duration time.Duration) {
 */
 
 func (s *Server) AccessCritical(ctx context.Context, requestMessage *Auction.RequestMessage) (*Auction.ReplyMessage, error) {
-	log.Printf("%d, Stamp: %d Requesting access to leader election", s.ID, s.ServerTimestamp.GetTime())
-	log.Printf("----------------------------------------------------------")
+
 	s.state = WANTED
 	s.MessageAll(ctx, requestMessage)
 	reply := Auction.ReplyMessage{Timestamp: int32(s.ServerTimestamp.GetTime()), ServerId: int32(s.ID), Port: s.Port}
@@ -650,21 +660,13 @@ func (s *Server) MessageAll(ctx context.Context, msg *Auction.RequestMessage) er
 }
 
 func (s *Server) ReceiveRequest(ctx context.Context, requestMessage *Auction.RequestMessage) (*Auction.Void, error) {
-	log.Printf("%d received request from: %d", s.ID, requestMessage.ServerId)
-	log.Printf("----------------------------------------------------------")
-
-	s.ServerTimestamp.SyncClocks(uint32(requestMessage.Timestamp))
 
 	void := Auction.Void{}
 
 	if s.shouldDefer(requestMessage) {
-		log.Printf("%d is not accepting request from: %d", s.ID, requestMessage.ServerId)
-		log.Printf("----------------------------------------------------------")
 		s.queue.Enqueue(int(requestMessage.Port))
 		return &void, nil
 	} else {
-		log.Printf("%d is sending reply to: %d", s.ID, requestMessage.ServerId)
-		log.Printf("----------------------------------------------------------")
 		s.SendReply(requestMessage.Port)
 		return &void, nil
 	}
@@ -716,10 +718,6 @@ func (s *Server) ReceiveReply(ctx context.Context, replyMessage *Auction.ReplyMe
 func (s *Server) EnterCriticalSection() {
 	s.state = HELD
 	s.ServerTimestamp.Tick()
-	log.Printf("%d entered the critical section(%v)", s.ID, s.ServerTimestamp.GetTime())
-	log.Printf("----------------------------------------------------------")
-
-	//UPDATE TIMESTAMP HER?
 
 	s.CallRingElection(context.Background())
 
@@ -728,17 +726,14 @@ func (s *Server) EnterCriticalSection() {
 
 func (s *Server) LeaveCriticalSection() {
 	s.ServerTimestamp.Tick()
-	log.Printf("%d is leaving the critical section(%v)", s.ID, s.ServerTimestamp.GetTime())
-	log.Printf("----------------------------------------------------------")
 	s.state = RELEASED
-	//UPDATE TIMESTAMP HER?
+
 	s.replyCounter = 0
 
 	for !s.queue.Empty() {
 		index := s.queue.Front()
 		s.queue.Dequeue()
-		log.Printf("%d: reply to defered request", s.ID)
-		log.Printf("----------------------------------------------------------")
+
 		s.CallSetStateReleased(index)
 	}
 }
@@ -760,6 +755,10 @@ func (s *Server) SetStateReleased(ctx context.Context, void *Auction.Void) (*Auc
 	s.state = RELEASED
 
 	return &Auction.Void{}, nil
+}
+
+func (s *Server) GetPort() int32 {
+	return s.Port
 }
 
 /*

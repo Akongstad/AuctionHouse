@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"io"
 	"log"
@@ -41,67 +40,7 @@ func translateReturn(nr int32) (msg string) {
 	}
 }
 
-/*
-	VI SKAL HAVE EN NY STREAM
-	GRPC OPRETTER FORBINDELSE AUTOMATISK
-	JEG TROR VI SKAL BRUGE CONNECT METODEN IGEN
-*/
-
-/*func (grpcclient *gRPCClient) connect(user *Auction.User) error {
-	var streamError error
-	var err error
-	grpcclient.stream, err = grpcclient.client.OpenConnection(context.Background(), &Auction.Connect{
-		User:   user,
-		Active: true,
-	})
-
-	if err != nil {
-		log.Fatalf("Connect failed: %v", err)
-		return err
-	}
-
-	grpcclient.wait.Add(1)
-	go grpcclient.receiveStream(grpcclient.stream, user)
-
-	return streamError
-}*/
-
-/*func (grpcclient *gRPCClient) receiveStream(str Auction.AuctionHouse_OpenConnectionClient, user *Auction.User) {
-	defer grpcclient.wait.Done()
-
-	for {
-
-		msg, err := str.Recv()
-		if err != nil {
-			log.Println("Error reading message")
-			log.Println("Retrying in 10 seconds")
-			log.Println("----------------------------")
-			// luk stream
-
-			grpcclient.conn.Close()
-			time.Sleep(time.Second * 10)
-
-			grpcclient.conn.WaitForStateChange(ctx, connectivity.Ready)
-
-			//åben stream igen
-			//var err2 error
-			//grpcclient.stream, err2 = grpcclient.client.OpenConnection(context.Background(), &Auction.Connect{
-				//User:   user,
-				//Active: true,
-			//})
-			//if err2 != nil {
-				log.Printf("Connect failed: %v", err)
-			//}
-
-		} else {
-			grpcclient.clock.SyncClocks(msg.GetTimestamp())
-			log.Printf("Auction House: %s: Has joined the auction(%d)", msg.GetUser().GetName(), grpcclient.clock.GetTime())
-		}
-
-	}
-}*/
-
-func (grpcclient *gRPCClient) ProcessRequests() error {
+func (grpcclient *gRPCClient) ProcessRequests() {
 	defer grpcclient.conn.Close()
 
 	go grpcclient.process()
@@ -109,33 +48,30 @@ func (grpcclient *gRPCClient) ProcessRequests() error {
 		select {
 		case <-grpcclient.reconnect:
 			if !grpcclient.waitUntilReady() {
-				return errors.New("failed to establish a connection within the defined timeout")
+				log.Fatal("failed to establish a connection within the defined timeout")
 			}
 			go grpcclient.process()
 		case <-grpcclient.done:
-			return nil
+			return
 		}
 	}
 }
 
 func (grpcclient *gRPCClient) process() {
-	reqclient := GetStream(&grpcclient.user) //always get a new stream
+	reqclient := grpcclient.GetStream()
 	for {
 		request, err := reqclient.Recv()
-		log.Println("Request received")
 		if err == io.EOF {
-			grpcclient.done <- true
 			log.Printf("io error: %v", err)
+			grpcclient.done <- true
 			return
-		}
-		if err != nil {
+		} else if err != nil {
+			log.Printf("Reconnecting...")
 			grpcclient.reconnect <- true
-			log.Printf("Failed to reconnect: %v", err)
 			return
 
 		} else {
-			//the happy path
-			//code block to process any requests that are received
+
 			grpcclient.clock.SyncClocks(request.GetTimestamp())
 			log.Printf("Auction House: %s: Has joined the auction(%d)", request.GetUser().GetName(), grpcclient.clock.GetTime())
 		}
@@ -143,18 +79,17 @@ func (grpcclient *gRPCClient) process() {
 }
 
 func (grpcclient *gRPCClient) waitUntilReady() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second) //define how long you want to wait for connection to be restored before giving up
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	currentState := grpcclient.conn.GetState()
 	stillConnecting := true
 
 	for currentState != connectivity.Ready && stillConnecting {
-		//will return true when state has changed from thisState, false if timeout
+
 		stillConnecting = grpcclient.conn.WaitForStateChange(ctx, currentState)
 		currentState = grpcclient.conn.GetState()
-		log.Println("Attempting reconnection. State has changed to:")
-		log.Printf("state: %v", currentState)
+		log.Printf("Attempting reconnection. State has changed to: %v", currentState)
 	}
 
 	if stillConnecting {
@@ -165,9 +100,10 @@ func (grpcclient *gRPCClient) waitUntilReady() bool {
 	return true
 }
 
-func GetStream(user *Auction.User) Auction.AuctionHouse_OpenConnectionClient {
+func (grpcclient *gRPCClient) GetStream() Auction.AuctionHouse_OpenConnectionClient {
+	grpcclient.dialServer()
 	connection, err := client.OpenConnection(context.Background(), &Auction.Connect{
-		User:   user,
+		User:   &grpcclient.user,
 		Active: true,
 	})
 	if err != nil {
@@ -180,7 +116,6 @@ func GetStream(user *Auction.User) Auction.AuctionHouse_OpenConnectionClient {
 func (grpcclient *gRPCClient) dialServer() {
 	if grpcclient.conn != nil {
 		grpcclient.conn.Close()
-		log.Println("Closing connections")
 	}
 	var err error
 	grpcclient.conn, err = grpc.Dial(":5001", grpc.WithInsecure())
@@ -206,22 +141,19 @@ func main() {
 		Name: *clientName,
 	}
 	c := &gRPCClient{
-		wait:  &sync.WaitGroup{},
-		clock: Auction.LamportClock{},
-		user:  *clientUser,
+		wait:      &sync.WaitGroup{},
+		clock:     Auction.LamportClock{},
+		user:      *clientUser,
+		reconnect: make(chan bool),
+		done:      make(chan bool),
 	}
 
 	log.Println(*clientName, "Connecting")
 
 	// Set up a connection to the server.
 	c.dialServer()
-
-	//Create stream
 	go c.ProcessRequests()
-	//c.connect(clientUser)
-	log.Println(*clientName, "Connected")
 
-	//Send messages
 	c.wait.Add(1)
 
 	go func() {
@@ -275,7 +207,7 @@ func main() {
 						bid, err := strconv.Atoi(inputArray[1])
 
 						if err != nil {
-							//log.Printf("Bid: Error %v", err)
+
 							log.Println("The Auction House only accepts real integers as currency")
 						}
 
@@ -288,7 +220,7 @@ func main() {
 						reply, err := client.Bid(context.Background(), Bidmsg)
 						if err != nil {
 							log.Printf("Something went wrong")
-							log.Println("Trying to reconnect")
+							log.Println("We are currently trying to reconnect you")
 
 						} else {
 

@@ -30,6 +30,7 @@ type AuctionHouseClient interface {
 	SelectNewLeader(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ElectionPorts, error)
 	BroadcastNewLeader(ctx context.Context, in *ElectionPorts, opts ...grpc.CallOption) (*Void, error)
 	CutOfReplicate(ctx context.Context, in *CutOfMessage, opts ...grpc.CallOption) (*Void, error)
+	PromptTimeAndDuration(ctx context.Context, in *Void, opts ...grpc.CallOption) (*TimeMessage, error)
 	//Ricart And Agrawala
 	AccessCritical(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*ReplyMessage, error)
 	ReceiveRequest(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*Void, error)
@@ -176,6 +177,15 @@ func (c *auctionHouseClient) CutOfReplicate(ctx context.Context, in *CutOfMessag
 	return out, nil
 }
 
+func (c *auctionHouseClient) PromptTimeAndDuration(ctx context.Context, in *Void, opts ...grpc.CallOption) (*TimeMessage, error) {
+	out := new(TimeMessage)
+	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/PromptTimeAndDuration", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *auctionHouseClient) AccessCritical(ctx context.Context, in *RequestMessage, opts ...grpc.CallOption) (*ReplyMessage, error) {
 	out := new(ReplyMessage)
 	err := c.cc.Invoke(ctx, "/Auction.AuctionHouse/AccessCritical", in, out, opts...)
@@ -228,6 +238,7 @@ type AuctionHouseServer interface {
 	SelectNewLeader(context.Context, *Void) (*ElectionPorts, error)
 	BroadcastNewLeader(context.Context, *ElectionPorts) (*Void, error)
 	CutOfReplicate(context.Context, *CutOfMessage) (*Void, error)
+	PromptTimeAndDuration(context.Context, *Void) (*TimeMessage, error)
 	//Ricart And Agrawala
 	AccessCritical(context.Context, *RequestMessage) (*ReplyMessage, error)
 	ReceiveRequest(context.Context, *RequestMessage) (*Void, error)
@@ -275,6 +286,9 @@ func (UnimplementedAuctionHouseServer) BroadcastNewLeader(context.Context, *Elec
 }
 func (UnimplementedAuctionHouseServer) CutOfReplicate(context.Context, *CutOfMessage) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CutOfReplicate not implemented")
+}
+func (UnimplementedAuctionHouseServer) PromptTimeAndDuration(context.Context, *Void) (*TimeMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PromptTimeAndDuration not implemented")
 }
 func (UnimplementedAuctionHouseServer) AccessCritical(context.Context, *RequestMessage) (*ReplyMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AccessCritical not implemented")
@@ -520,6 +534,24 @@ func _AuctionHouse_CutOfReplicate_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuctionHouse_PromptTimeAndDuration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).PromptTimeAndDuration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Auction.AuctionHouse/PromptTimeAndDuration",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).PromptTimeAndDuration(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuctionHouse_AccessCritical_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequestMessage)
 	if err := dec(in); err != nil {
@@ -642,6 +674,10 @@ var AuctionHouse_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CutOfReplicate",
 			Handler:    _AuctionHouse_CutOfReplicate_Handler,
+		},
+		{
+			MethodName: "PromptTimeAndDuration",
+			Handler:    _AuctionHouse_PromptTimeAndDuration_Handler,
 		},
 		{
 			MethodName: "AccessCritical",

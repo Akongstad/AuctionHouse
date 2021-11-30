@@ -36,7 +36,11 @@ message ReplicateMessage{
     int32 amount = 1;
     User user = 2;
     uint32 timestamp = 3;
-    string auctionStart = 4;
+}
+
+message TimeMessage{
+    string auctionStart = 1;
+    int32 duration = 2;
 }
 
 message Connect{
@@ -88,6 +92,7 @@ service AuctionHouse{
     rpc SelectNewLeader(Void) returns (ElectionPorts){}
     rpc BroadcastNewLeader(ElectionPorts) returns (Void){}
     rpc CutOfReplicate(CutOfMessage) returns (Void){}
+    rpc PromptTimeAndDuration(Void) returns (TimeMessage){}
     //Ricart And Agrawala
     rpc AccessCritical(RequestMessage) returns(ReplyMessage){}
     rpc ReceiveRequest(RequestMessage) returns(Void){}
