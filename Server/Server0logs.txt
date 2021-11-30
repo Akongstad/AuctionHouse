@@ -1,9 +1,26 @@
-2021/11/29 19:25:37 Auction open at: [::]:5001
-2021/11/29 19:25:37 Server stopped listening
-37 Prime replica: Pulse(1)
-2021/11/29 19:24:47 Prime replica: Pulse(2)
-2021/11/29 19:24:57 Prime replica: Pulse(3)
-2021/11/29 19:25:07 Prime replica: Pulse(4)
-2021/11/29 19:25:17 Prime replica: Pulse(5)
-2021/11/29 19:25:27 Prime replica: Pulse(6)
-plica: Pulse(7)
+2021/11/30 11:25:13 Auction open at: [::]:5001
+2021/11/30 11:25:18 Prime replica: Pulse(1)
+2021/11/30 11:25:23 Prime replica: Pulse(2)
+2021/11/30 11:25:28 Prime replica: Pulse(3)
+2021/11/30 11:25:33 Prime replica: Pulse(4)
+2021/11/30 11:25:34 __________________________________
+2021/11/30 11:25:34 Auction House: Niclas has joined the auction!
+2021/11/30 11:16:50 Prime replica: Pulse(5)
+2021/11/30 11:16:55 Prime replica: Pulse(6)
+2021/11/30 11:16:57 __________________________________
+2021/11/30 11:16:57 Auction House: Andreas has joined the auction!
+2021/11/30 11:17:00 Prime replica: Pulse(7)
+2021/11/30 11:17:05 Prime replica: Pulse(8)
+2021/11/30 11:17:10 Prime replica: Pulse(9)
+2021/11/30 11:17:15 Prime replica: Pulse(10)
+2021/11/30 11:17:20 Prime replica: Pulse(11)
+2021/11/30 11:17:25 Prime replica: Pulse(12)
+2021/11/30 11:17:30 Prime replica: Pulse(13)
+2021/11/30 11:17:35 Prime replica: Pulse(14)
+1/29 20:15:01 Prime replica: Pulse(5)
+1/11/29 20:01:00 Highest bid: 55, by: Niclas
+2021/11/29 20:01:04 Highest bid: 56, by: Niclas
+2021/11/29 20:01:08 Highest bid: 599, by: Niclas
+2021/11/29 20:01:08 Prime replica: Pulse(13)
+2021/11/29 20:01:10 Highest bid: 599, by: Niclas
+2021/11/29 20:01:18 Prime replica: Pulse(17)
