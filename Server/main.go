@@ -29,8 +29,6 @@ const (
 	HELD
 )
 
-var wait *sync.WaitGroup
-
 type Connection struct {
 	stream Auction.AuctionHouse_OpenConnectionServer
 	id     string
@@ -48,19 +46,19 @@ type Server struct {
 	Connections   []*Connection
 	PrimePulse    time.Time
 	Auction.UnimplementedAuctionHouseServer
-	ServerTimestamp Auction.LamportClock
-	lock            sync.Mutex
-	Ports           []int32
-	Port            int32
-	state           STATE
-	replyCounter    int
-	queue           customQueue
-	grpcServer      *grpc.Server
+	ServerTimestamp   Auction.LamportClock
+	lock              sync.Mutex
+	Ports             []int32
+	Port              int32
+	state             STATE
+	replyCounter      int
+	grpcServer        *grpc.Server
+	receivedNewLeader bool
 }
 
 func (s *Server) Pulse() {
 	for {
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 2)
 		if s.GetPort() == MainPort {
 			s.ServerTimestamp.Tick()
 
@@ -81,28 +79,63 @@ func (s *Server) Pulse() {
 							Timestamp: s.ServerTimestamp.GetTime(),
 						}
 						client.RegisterPulse(context.Background(), &msg)
-
 					}
 				}
 			}()
-		} else if time.Since(s.PrimePulse).Seconds() > time.Second.Seconds()*5 && s.state != WANTED && s.state != HELD {
-			s.ServerTimestamp.Tick()
-			log.Printf("Missing pulse from prime replica. Last Pulse: %v seconds ago", time.Since(s.PrimePulse))
+		} else if s.receivedNewLeader {
+			//This makes sure, that a port will not request to become leader right after it has received a new leader
+			s.receivedNewLeader = false
+		} else if time.Since(s.PrimePulse).Seconds() > time.Second.Seconds()*6 && s.state != WANTED && s.state != HELD {
 
-			log.Printf("Leader election called")
+			if len(s.Ports) > 2 {
+				s.ServerTimestamp.Tick()
+				log.Printf("Missing pulse from prime replica. Last Pulse: %v seconds ago", time.Since(s.PrimePulse))
 
-			msg := Auction.RequestMessage{
-				ServerId:  int32(s.ID),
-				Timestamp: int32(s.ServerTimestamp.GetTime()),
-				Port:      s.Port,
+				log.Printf("Leader election called")
+
+				msg := Auction.RequestMessage{
+					ServerId:  int32(s.ID),
+					Timestamp: int32(s.ServerTimestamp.GetTime()),
+					Port:      s.Port,
+				}
+				_, err := s.AccessCritical(context.Background(), &msg)
+				if err != nil {
+					log.Fatalf("Failed to access critical: %v", err)
+				}
+
+			} else {
+				s.LastLeader()
 			}
 
-			_, err := s.AccessCritical(context.Background(), &msg)
-			if err != nil {
-				log.Fatalf("Failed to access critical: %v", err)
-			}
 		}
 	}
+}
+
+func (s *Server) LastLeader() {
+	updatedPort := s.FindIndex(s.Port)
+	s.Ports = removePort(s.Ports, int32(updatedPort))
+	s.Port = MainPort
+
+	s.grpcServer = grpc.NewServer()
+
+	lis, err := net.Listen("tcp", ":"+strconv.Itoa(int(s.Port)))
+	if err != nil {
+		log.Fatalf("Failed to listen port: %v", err)
+	}
+
+	log.Printf("Auction open at: %v", lis.Addr())
+
+	Auction.RegisterAuctionHouseServer(s.grpcServer, s)
+	go func(listener net.Listener) {
+		defer func() {
+			lis.Close()
+			log.Printf("Server stopped listening")
+		}()
+
+		if err := s.grpcServer.Serve(listener); err != nil {
+			log.Fatalf("Failed to serve server: %v", err)
+		}
+	}(lis)
 }
 
 func (s *Server) RegisterPulse(ctx context.Context, msg *Auction.Message) (*Auction.Void, error) {
@@ -264,22 +297,19 @@ func (s *Server) RingElection(ctx context.Context, msg *Auction.PortsAndClocks) 
 				log.Printf("Election: Failed to select new leader: %v", err)
 			}
 
-			indexOfMainPort := s.FindIndex(MainPort)
-
 			for i := 0; i < len(newPortList.ListOfPorts); i++ {
 
-				if i != indexOfMainPort {
-					conn, err := grpc.Dial(":"+strconv.Itoa(int(newPortList.ListOfPorts[i])), grpc.WithInsecure())
+				conn, err := grpc.Dial(":"+strconv.Itoa(int(newPortList.ListOfPorts[i])), grpc.WithInsecure())
 
-					if err != nil {
-						log.Printf("Election: Failed to dial this port: %v", err)
-					} else {
-						defer conn.Close()
-						client := Auction.NewAuctionHouseClient(conn)
+				if err != nil {
+					log.Printf("Election: Failed to dial this port: %v", err)
+				} else {
+					defer conn.Close()
+					client := Auction.NewAuctionHouseClient(conn)
 
-						client.BroadcastNewLeader(ctx, newPortList)
-					}
+					client.BroadcastNewLeader(ctx, newPortList)
 				}
+
 			}
 		}
 	} else {
@@ -310,7 +340,11 @@ func (s *Server) RingElection(ctx context.Context, msg *Auction.PortsAndClocks) 
 
 func (s *Server) BroadcastNewLeader(ctx context.Context, newPorts *Auction.ElectionPorts) (*Auction.Void, error) {
 	log.Println("Received new leader")
+	s.receivedNewLeader = true
 	s.Ports = newPorts.ListOfPorts
+	s.state = RELEASED
+	s.replyCounter = 0
+
 	return &Auction.Void{}, nil
 }
 
@@ -347,6 +381,12 @@ func (s *Server) SelectNewLeader(ctx context.Context, void *Auction.Void) (*Auct
 
 	return &newPortList, nil
 }
+
+/*
+----------------------------------------------------------------------------------------------
+	CLient API
+----------------------------------------------------------------------------------------------
+*/
 
 func (s *Server) Bid(ctx context.Context, bid *Auction.BidMessage) (*Auction.BidReply, error) {
 	s.lock.Lock()
@@ -398,6 +438,11 @@ func (s *Server) Result(ctx context.Context, msg *Auction.Void) (*Auction.Result
 	}
 }
 
+/*
+----------------------------------------------------------------------------------------------
+	Client Connection and communitation
+----------------------------------------------------------------------------------------------
+*/
 func (s *Server) OpenConnection(connect *Auction.Connect, stream Auction.AuctionHouse_OpenConnectionServer) error {
 	conn := &Connection{
 		stream: stream,
@@ -475,6 +520,12 @@ func (s *Server) Broadcast(ctx context.Context, msg *Auction.Message) (*Auction.
 	return &Auction.Void{}, nil
 }
 
+/*
+----------------------------------------------------------------------------------------------
+	Main
+----------------------------------------------------------------------------------------------
+*/
+
 func main() {
 	id := flag.Int("I", -1, "id")
 	AuctionTime := flag.Int("D", 100, "seconds")
@@ -495,8 +546,6 @@ func main() {
 		ports = append(ports, int32(nextPort))
 	}
 
-	queue := &customQueue{queue: make([]int, 0)}
-
 	s := &Server{
 		ID:                              *id,
 		Connections:                     connections,
@@ -507,7 +556,6 @@ func main() {
 		Port:                            ports[*id],
 		PrimePulse:                      time.Now(),
 		state:                           RELEASED,
-		queue:                           *queue,
 		grpcServer:                      grpc.NewServer(),
 	}
 	go s.StartAuction(time.Second * time.Duration(*AuctionTime))
@@ -601,10 +649,10 @@ func (s *Server) StartAuction(Duration time.Duration) {
 			s.Duration = time.Duration(time.Second * time.Duration(msg.Duration))
 		}
 	} else {
-
 		s.StartTime = time.Now().UTC()
 		s.Duration = Duration
 	}
+
 	log.Printf("Auctioneer: Auction started at %d. Duration will be: %v seconds", s.Port, s.Duration.Seconds())
 
 	for {
@@ -640,11 +688,12 @@ func (s *Server) AccessCritical(ctx context.Context, requestMessage *Auction.Req
 }
 
 func (s *Server) MessageAll(ctx context.Context, msg *Auction.RequestMessage) error {
-	portIndex := s.FindIndex(s.Port)
+	mainPortIndex := s.FindIndex(MainPort)
+	ownPortIndex := s.FindIndex(s.Port)
 
 	for i := 0; i < len(s.Ports); i++ {
 
-		if i != portIndex {
+		if i != mainPortIndex && i != ownPortIndex {
 			conn, err := grpc.Dial(":"+strconv.Itoa(int(s.Ports[i])), grpc.WithInsecure())
 
 			if err != nil {
@@ -661,15 +710,12 @@ func (s *Server) MessageAll(ctx context.Context, msg *Auction.RequestMessage) er
 
 func (s *Server) ReceiveRequest(ctx context.Context, requestMessage *Auction.RequestMessage) (*Auction.Void, error) {
 
-	void := Auction.Void{}
-
-	if s.shouldDefer(requestMessage) {
-		s.queue.Enqueue(int(requestMessage.Port))
-		return &void, nil
-	} else {
+	if !s.shouldDefer(requestMessage) {
 		s.SendReply(requestMessage.Port)
-		return &void, nil
+		log.Println("Send reply to", requestMessage.Port)
 	}
+
+	return &Auction.Void{}, nil
 }
 
 func (s *Server) shouldDefer(requestMessage *Auction.RequestMessage) bool {
@@ -707,6 +753,8 @@ func (s *Server) ReceiveReply(ctx context.Context, replyMessage *Auction.ReplyMe
 
 	s.replyCounter++
 
+	log.Println("Received reply from a port")
+
 	if s.replyCounter == len(s.Ports)-2 {
 		s.EnterCriticalSection()
 	}
@@ -716,87 +764,15 @@ func (s *Server) ReceiveReply(ctx context.Context, replyMessage *Auction.ReplyMe
 }
 
 func (s *Server) EnterCriticalSection() {
+	log.Println("Entered the critical section")
 	s.state = HELD
 	s.ServerTimestamp.Tick()
 
 	s.CallRingElection(context.Background())
 
-	s.LeaveCriticalSection()
-}
-
-func (s *Server) LeaveCriticalSection() {
 	s.ServerTimestamp.Tick()
-	s.state = RELEASED
-
-	s.replyCounter = 0
-
-	for !s.queue.Empty() {
-		index := s.queue.Front()
-		s.queue.Dequeue()
-
-		s.CallSetStateReleased(index)
-	}
-}
-
-func (s *Server) CallSetStateReleased(index int) {
-
-	port := s.FindIndex(int32(index))
-	conn, err := grpc.Dial(":"+strconv.Itoa(int(port)), grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Failed to connect to port: %v", err)
-	}
-	defer conn.Close()
-	client := Auction.NewAuctionHouseClient(conn)
-	client.SetStateReleased(context.Background(), &Auction.Void{})
-}
-
-func (s *Server) SetStateReleased(ctx context.Context, void *Auction.Void) (*Auction.Void, error) {
-
-	s.state = RELEASED
-
-	return &Auction.Void{}, nil
 }
 
 func (s *Server) GetPort() int32 {
 	return s.Port
-}
-
-/*
-QUEUE
-*/
-
-type customQueue struct {
-	queue []int
-	lock  sync.RWMutex
-}
-
-func (c *customQueue) Enqueue(name int) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.queue = append(c.queue, name)
-}
-
-func (c *customQueue) Dequeue() {
-	if len(c.queue) > 0 {
-		c.lock.Lock()
-		defer c.lock.Unlock()
-		c.queue = c.queue[1:]
-	}
-}
-
-func (c *customQueue) Front() int {
-	if len(c.queue) > 0 {
-		c.lock.Lock()
-		defer c.lock.Unlock()
-		return c.queue[0]
-	}
-	return -1
-}
-
-func (c *customQueue) Size() int {
-	return len(c.queue)
-}
-
-func (c *customQueue) Empty() bool {
-	return len(c.queue) == 0
 }

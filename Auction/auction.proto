@@ -93,9 +93,9 @@ service AuctionHouse{
     rpc BroadcastNewLeader(ElectionPorts) returns (Void){}
     rpc CutOfReplicate(CutOfMessage) returns (Void){}
     rpc PromptTimeAndDuration(Void) returns (TimeMessage){}
+    
     //Ricart And Agrawala
     rpc AccessCritical(RequestMessage) returns(ReplyMessage){}
     rpc ReceiveRequest(RequestMessage) returns(Void){}
     rpc ReceiveReply(ReplyMessage) returns(Void){}
-    rpc SetStateReleased(Void) returns(Void){}
 }

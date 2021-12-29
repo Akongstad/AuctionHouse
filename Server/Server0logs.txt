@@ -1,8 +1,10 @@
-2021/11/30 16:19:15 Auction open at: [::]:5001
-2021/11/30 16:19:37 __________________________________
-2021/11/30 16:19:37 Auction House: Niclas has joined the auction!
-2021/11/30 16:19:37 Broadcasting message to: Niclas
-2021/11/30 16:19:41 __________________________________
+2021/12/29 13:18:30 Auction open at: [::]:5001
+ at 5001. Duration will be: 100 seconds
+2021/12/29 12:46:17 Auction open at: [::]:5001
+2021/12/29 12:47:57 Auctioneer: Auction closed. Highest bid: 0 by 
+ message to: Andreas
+2021/11/30 20:50:01 Highest bid: 100, by: Andreas
+__
 2021/11/30 16:19:41 Auction House: Andreas has joined the auction!
 2021/11/30 16:19:41 Broadcasting message to: Niclas
 2021/11/30 16:19:41 Broadcasting message to: Andreas
